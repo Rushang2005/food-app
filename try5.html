@@ -1,0 +1,2342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniFood - Premium Food Delivery</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for Graphics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs (v8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #1a202c;
+            --secondary-color: #D4AF37;
+        }
+        body { font-family: 'Manrope', sans-serif; background-color: #F8F9FA; }
+        h1, h2, h3, h4, .font-serif { font-family: 'Playfair Display', serif; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .auth-container { min-height: 100vh; background-size: cover; background-position: center; }
+        .auth-card { background-color: rgba(255, 255, 255, 0.97); backdrop-filter: blur(10px); }
+        .btn { transition: all 0.3s ease; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); }
+        .btn-primary { background-color: var(--primary-color); color: #ffffff; }
+        .btn-secondary { background-color: var(--secondary-color); color: #ffffff; }
+        .btn-danger { background-color: #E53935; color: #ffffff; }
+        .input-field { background-color: #F1F3F5; border: 2px solid transparent; transition: all 0.3s ease; }
+        .input-field:focus { background-color: #fff; border-color: var(--secondary-color); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; transition: all 0.2s ease; font-weight: 500; color: #4A5568; }
+        .sidebar-link:hover { background-color: #EDF2F7; color: #1A202C; }
+        .sidebar-link.active { background-color: var(--primary-color); color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: white; padding: 2rem; border-radius: 1rem; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto; transform: scale(0.95); transition: transform 0.3s ease; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        #maintenance-overlay { display: none; position: fixed; inset: 0; background-color: #F8F9FA; z-index: 9999; }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: capitalize; }
+        #cart-button { position: fixed; bottom: 2rem; right: 2rem; z-index: 999; }
+        #cart-count { position: absolute; top: -0.5rem; right: -0.5rem; background-color: #E53935; color: white; border-radius: 50%; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        
+        /* Print styles for bill */
+        @media print {
+            body * { visibility: hidden; }
+            #printable-bill, #printable-bill * { visibility: visible; }
+            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+    
+    <!-- Maintenance Mode Overlay -->
+    <div id="maintenance-overlay" class="flex items-center justify-center text-center p-8">
+        <div>
+            <i data-feather="tool" class="w-16 h-16 mx-auto text-gray-500"></i>
+            <h1 class="text-4xl font-bold font-serif mt-4">Under Maintenance</h1>
+            <p class="text-gray-600 mt-2">We are currently performing maintenance. Please check back later.</p>
+        </div>
+    </div>
+
+    <!-- Auth Container -->
+    <div id="auth-container" class="auth-container p-4 flex items-center justify-center">
+        <div class="w-full max-w-md p-8 md:p-12 rounded-2xl shadow-2xl auth-card"></div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="hidden">
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-50">
+            <div class="flex items-center gap-4">
+                <img id="website-logo-header" src="https://placehold.co/100x40?text=UniFood" alt="Logo" class="h-10">
+                <h1 id="website-name-header" class="text-3xl font-bold text-gray-800 font-serif">UniFood</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="user-info" class="text-right"></div>
+                <button id="logout-btn" class="btn btn-primary text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"><i data-feather="log-out" class="w-4 h-4"></i>Logout</button>
+            </div>
+        </header>
+        <div id="announcement-banner-container"></div>
+        <main id="main-content" class="p-4 md:p-8 max-w-7xl mx-auto w-full"></main>
+    </div>
+    
+    <button id="cart-button" class="btn btn-secondary p-4 rounded-full shadow-lg hidden">
+        <i data-feather="shopping-cart" class="w-6 h-6"></i>
+        <span id="cart-count">0</span>
+    </button>
+
+    <!-- Templates for Auth Forms -->
+    <template id="login-form-template">
+        <form id="login-form" class="space-y-6 fade-in">
+            <div class="text-center"><h2 class="text-4xl font-bold text-gray-800 font-serif">Welcome Back</h2><p class="text-gray-600 mt-2">Sign in to get your food.</p></div>
+            <div><label for="email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="email" class="input-field mt-1 block w-full rounded-lg py-3 px-4" required></div>
+            <div><label for="password" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="password" class="input-field mt-1 block w-full rounded-lg py-3 px-4" required></div>
+            <button type="submit" class="btn btn-primary w-full text-white font-bold py-3 rounded-lg">Login</button>
+            <div id="login-error" class="text-red-500 text-center text-sm h-4"></div>
+            <p class="text-center text-sm">Don't have an account? <a href="#" id="show-signup-link" class="font-semibold text-gray-800 hover:underline">Sign Up</a></p>
+        </form>
+    </template>
+    <template id="signup-form-template">
+        <form id="signup-form" class="space-y-4 fade-in">
+            <div class="text-center"><h2 class="text-4xl font-bold text-gray-800 font-serif">Create Account</h2><p class="text-gray-600 mt-2">Join us for a delicious journey.</p></div>
+            <input type="text" id="signup-name" class="input-field w-full rounded-lg py-3 px-4" placeholder="Full Name" required>
+            <input type="tel" id="signup-mobile" class="input-field w-full rounded-lg py-3 px-4" placeholder="Mobile Number" required>
+            <input type="email" id="signup-email" class="input-field w-full rounded-lg py-3 px-4" placeholder="Email Address" required>
+            <input type="password" id="signup-password" class="input-field w-full rounded-lg py-3 px-4" placeholder="Password (min. 6 characters)" required>
+            <button type="submit" class="btn btn-primary w-full text-white font-bold py-3 rounded-lg">Sign Up</button>
+            <div id="signup-error" class="text-red-500 text-center text-sm h-4"></div>
+            <p class="text-center text-sm">Already have an account? <a href="#" id="show-login-link" class="font-semibold text-gray-800 hover:underline">Login</a></p>
+        </form>
+    </template>
+
+    <!-- Templates for User Portals -->
+    <template id="customer-portal-template">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <aside class="lg:col-span-1 bg-white p-4 rounded-xl shadow-md self-start sticky top-28">
+                <h3 class="text-xl font-bold font-serif mb-6 px-4">Menu</h3>
+                <nav id="customer-nav" class="space-y-1">
+                    <button class="w-full text-left sidebar-link active" data-view="home"><i data-feather="home"></i>Home</button>
+                    <button class="w-full text-left sidebar-link" data-view="orders"><i data-feather="package"></i>My Orders</button>
+                    <button class="w-full text-left sidebar-link" data-view="profile"><i data-feather="user"></i>Profile</button>
+                </nav>
+            </aside>
+            <main id="customer-main-content" class="lg:col-span-3">
+                <!-- Customer content will be injected here -->
+            </main>
+        </div>
+    </template>
+    
+    <template id="delivery-portal-template">
+        <section class="fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside class="lg:col-span-1 bg-white p-4 rounded-xl shadow-md self-start sticky top-28">
+                    <h3 class="text-xl font-bold font-serif mb-6 px-4">Delivery Panel</h3>
+                    <nav id="delivery-nav" class="space-y-1">
+                        <button class="w-full text-left sidebar-link active" data-view="available-orders"><i data-feather="zap"></i>Available Orders</button>
+                        <button class="w-full text-left sidebar-link" data-view="assigned-orders"><i data-feather="list"></i>My Deliveries</button>
+                        <button class="w-full text-left sidebar-link" data-view="delivery-history"><i data-feather="archive"></i>Delivery History</button>
+                        <button class="w-full text-left sidebar-link" data-view="earnings"><i data-feather="dollar-sign"></i>Earnings</button>
+                        <button class="w-full text-left sidebar-link" data-view="profile"><i data-feather="user"></i>Profile</button>
+                    </nav>
+                </aside>
+                <main id="delivery-main-content" class="lg:col-span-3">
+                    <!-- Delivery Boy content will be dynamically injected here -->
+                </main>
+            </div>
+        </section>
+    </template>
+    
+    <template id="restaurant-portal-template">
+        <section class="fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside class="lg:col-span-1 bg-white p-4 rounded-xl shadow-md self-start sticky top-28">
+                    <h3 class="text-xl font-bold font-serif mb-6 px-4">Restaurant Menu</h3>
+                    <nav id="restaurant-nav" class="space-y-1">
+                        <button class="w-full text-left sidebar-link active" data-view="dashboard"><i data-feather="bar-chart-2"></i>Dashboard</button>
+                        <button class="w-full text-left sidebar-link" data-view="orders"><i data-feather="shopping-cart"></i>Order Management</button>
+                        <button class="w-full text-left sidebar-link" data-view="menu"><i data-feather="book-open"></i>Menu Management</button>
+                        <button class="w-full text-left sidebar-link" data-view="profile"><i data-feather="edit"></i>Restaurant Profile</button>
+                    </nav>
+                </aside>
+                <main id="restaurant-main-content" class="lg:col-span-3">
+                    <!-- Restaurant Owner content will be dynamically injected here -->
+                </main>
+            </div>
+        </section>
+    </template>
+
+    <template id="admin-portal-template">
+        <section class="fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside class="lg:col-span-1 bg-white p-4 rounded-xl shadow-md self-start sticky top-28">
+                    <h3 class="text-xl font-bold font-serif mb-6 px-4">Admin Menu</h3>
+                    <nav id="admin-nav" class="space-y-1">
+                        <button class="w-full text-left sidebar-link active" data-view="dashboard"><i data-feather="bar-chart-2"></i>Dashboard</button>
+                        <button class="w-full text-left sidebar-link" data-view="restaurants"><i data-feather="coffee"></i>Restaurants</button>
+                        <button class="w-full text-left sidebar-link" data-view="orders"><i data-feather="shopping-cart"></i>Orders</button>
+                        <button class="w-full text-left sidebar-link" data-view="users"><i data-feather="users"></i>Users</button>
+                        <button class="w-full text-left sidebar-link" data-view="delivery-boys"><i data-feather="truck"></i>Delivery Boys</button>
+                    </nav>
+                </aside>
+                <main id="admin-main-content" class="lg:col-span-3">
+                    <!-- Admin content will be dynamically injected here -->
+                </main>
+            </div>
+        </section>
+    </template>
+
+    <template id="superadmin-portal-template">
+       <section class="fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside class="lg:col-span-1 bg-white p-4 rounded-xl shadow-md self-start sticky top-28">
+                    <h3 class="text-xl font-bold font-serif mb-6 px-4">Super Admin Menu</h3>
+                    <nav id="superadmin-nav" class="space-y-1">
+                        <button class="w-full text-left sidebar-link active" data-view="dashboard"><i data-feather="bar-chart-2"></i>Dashboard</button>
+                        <button class="w-full text-left sidebar-link" data-view="admin-panel"><i data-feather="shield"></i>Admin Panel</button>
+                        <button class="w-full text-left sidebar-link" data-view="website-settings"><i data-feather="settings"></i>Website Settings</button>
+                        <button class="w-full text-left sidebar-link" data-view="user-roles"><i data-feather="user-check"></i>User Roles</button>
+                        <button class="w-full text-left sidebar-link" data-view="maintenance-mode"><i data-feather="server"></i>Maintenance Mode</button>
+                    </nav>
+                </aside>
+                <main id="superadmin-main-content" class="lg:col-span-3">
+                    <!-- Super Admin content will be dynamically injected here -->
+                </main>
+            </div>
+        </section>
+    </template>
+    
+    <!-- Generic Modal Template -->
+    <div id="modal-container" class="modal-overlay"></div>
+
+    <script>
+        // --- FIREBASE INITIALIZATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyAl16jGICR3WNOPMm_11SNsZ92YEowT-j8",
+          authDomain: "unifood-fb223.firebaseapp.com",
+          projectId: "unifood-fb223",
+          storageBucket: "unifood-fb223.appspot.com",
+          messagingSenderId: "307382508139",
+          appId: "1:307382508139:web:509ab3c0254321c40e2f2e",
+          measurementId: "G-J72XMB24GM"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // --- GLOBAL STATE & EVENT HANDLERS ---
+        let currentUser = null;
+        let unsubscribeListeners = [];
+        let activePortalHandler = null;
+        let siteSettings = {};
+        let cart = [];
+        
+        // --- UI REFERENCES ---
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const mainContent = document.getElementById('main-content');
+        const userInfo = document.getElementById('user-info');
+        const logoutBtn = document.getElementById('logout-btn');
+        const modalContainer = document.getElementById('modal-container');
+        const maintenanceOverlay = document.getElementById('maintenance-overlay');
+        const websiteNameHeader = document.getElementById('website-name-header');
+        const websiteLogoHeader = document.getElementById('website-logo-header');
+        const announcementContainer = document.getElementById('announcement-banner-container');
+        const cartButton = document.getElementById('cart-button');
+        const cartCountEl = document.getElementById('cart-count');
+
+        // --- CORE APP & AUTH LOGIC ---
+        
+        async function initializeApp() {
+            // Fetch site settings first
+            const settingsDoc = await db.collection('settings').doc('config').get();
+            if (settingsDoc.exists) {
+                siteSettings = settingsDoc.data();
+                applySiteSettings();
+            }
+
+            // Listen for auth changes
+            auth.onAuthStateChanged(async (user) => {
+                cleanupListeners();
+                if (activePortalHandler) {
+                    mainContent.removeEventListener('click', activePortalHandler);
+                    activePortalHandler = null;
+                }
+                cart = [];
+                updateCartButton();
+
+                if (user) {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        currentUser = { uid: user.uid, ...userDoc.data() };
+                         if (siteSettings.maintenanceMode && currentUser.role !== 'superadmin') {
+                            maintenanceOverlay.style.display = 'flex';
+                            if(auth.currentUser) auth.signOut();
+                            return;
+                        }
+
+                        if (currentUser.role === 'restaurant') {
+                            const restaurantDoc = await db.collection('restaurants').doc(currentUser.restaurantId).get();
+                            if (restaurantDoc.exists && restaurantDoc.data().isLocked) {
+                                showSimpleModal("Account Locked", "Your restaurant account is currently locked. Please contact support.");
+                                auth.signOut();
+                                return;
+                            }
+                        }
+
+                        if (currentUser.role === 'delivery' && currentUser.isLocked) {
+                             showSimpleModal("Account Locked", "Your delivery account is currently locked. Please contact support.");
+                             auth.signOut();
+                             return;
+                        }
+
+                        userInfo.innerHTML = `<p class="font-semibold">${currentUser.name}</p><p class="text-xs text-gray-500 capitalize">${currentUser.role}</p>`;
+                        showView('app');
+                        loadPortal(currentUser);
+                    } else { 
+                        showSimpleModal("Error", "Your user data could not be found. You have been logged out.");
+                        if(auth.currentUser) auth.signOut(); 
+                    }
+                } else {
+                    currentUser = null;
+                    if (siteSettings.maintenanceMode) {
+                        maintenanceOverlay.style.display = 'flex';
+                        feather.replace();
+                    } else {
+                        showView('auth');
+                    }
+                }
+            });
+        }
+
+        function applySiteSettings() {
+            if (siteSettings.websiteName) {
+                websiteNameHeader.textContent = siteSettings.websiteName;
+                document.title = siteSettings.websiteName;
+            }
+            if (siteSettings.logoUrl) {
+                websiteLogoHeader.src = siteSettings.logoUrl;
+            }
+            if (siteSettings.primaryColor) {
+                document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
+            }
+            if (siteSettings.secondaryColor) {
+                document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
+            }
+            if (siteSettings.heroBgImage) {
+                 authContainer.style.backgroundImage = `url('${siteSettings.heroBgImage}')`;
+            }
+            // Display active announcement
+            db.collection('announcements').where('isActive', '==', true).limit(1).get().then(snapshot => {
+                if (!snapshot.empty) {
+                    const announcement = snapshot.docs[0].data();
+                    announcementContainer.innerHTML = `
+                        <div class="bg-yellow-200 text-yellow-800 p-3 text-center text-sm">
+                            ${announcement.text}
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function showView(view) {
+            cartButton.classList.add('hidden');
+            if (view === 'app') {
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                appContainer.classList.add('fade-in');
+            } else {
+                appContainer.style.display = 'none';
+                authContainer.style.display = 'flex';
+                renderAuthForm('login');
+            }
+        }
+
+        async function loadPortal(user) {
+            mainContent.innerHTML = '';
+            cleanupListeners();
+            if (activePortalHandler) {
+                mainContent.removeEventListener('click', activePortalHandler);
+                activePortalHandler = null;
+            }
+
+            const role = user.role;
+            const template = document.getElementById(`${role}-portal-template`);
+
+            if (template) {
+                mainContent.appendChild(template.content.cloneNode(true));
+                feather.replace();
+                
+                switch (role) {
+                    case 'admin': initializeAdminPortal(); break;
+                    case 'superadmin': initializeSuperAdminPortal(); break;
+                    case 'restaurant': initializeRestaurantPortal(); break;
+                    case 'delivery': initializeDeliveryPortal(); break;
+                    case 'customer': initializeCustomerPortal(); break;
+                }
+            } else {
+                mainContent.innerHTML = `<p class="text-center text-red-500">Error: Portal template for role "${role}" not found.</p>`;
+            }
+        }
+
+        function renderAuthForm(formType) {
+            const authCard = authContainer.querySelector('.auth-card');
+            authCard.innerHTML = '';
+            const template = document.getElementById(`${formType}-form-template`);
+            if (template) {
+                authCard.appendChild(template.content.cloneNode(true));
+            }
+
+            if (formType === 'login') {
+                document.getElementById('login-form').addEventListener('submit', handleLogin);
+                document.getElementById('show-signup-link').addEventListener('click', (e) => { e.preventDefault(); renderAuthForm('signup'); });
+            } else {
+                document.getElementById('signup-form').addEventListener('submit', handleSignup);
+                document.getElementById('show-login-link').addEventListener('click', (e) => { e.preventDefault(); renderAuthForm('login'); });
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('login-error');
+            errorEl.textContent = '';
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(err => { errorEl.textContent = err.message; });
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            const errorEl = document.getElementById('signup-error');
+            errorEl.textContent = '';
+            const userData = {
+                name: document.getElementById('signup-name').value,
+                mobile: document.getElementById('signup-mobile').value,
+                email: document.getElementById('signup-email').value,
+                role: 'customer',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            const password = document.getElementById('signup-password').value;
+            auth.createUserWithEmailAndPassword(userData.email, password)
+                .then(cred => db.collection('users').doc(cred.user.uid).set(userData))
+                .catch(err => { errorEl.textContent = err.message; });
+        }
+        
+        // --- CUSTOMER PORTAL ---
+        function initializeCustomerPortal() {
+            activePortalHandler = handleCustomerClicks;
+            mainContent.addEventListener('click', activePortalHandler);
+            // Modal clicks are handled separately to avoid bubbling issues
+            modalContainer.addEventListener('click', (e) => {
+                const actionButton = e.target.closest('[data-action]');
+                if (actionButton && actionButton.dataset.action === 'remove-from-cart') {
+                    removeFromCart(actionButton.dataset.itemId);
+                }
+            });
+            cartButton.addEventListener('click', renderCartView);
+            renderCustomerView('home');
+        }
+        
+        function handleCustomerClicks(e) {
+            const sidebarLink = e.target.closest('.sidebar-link');
+            if (sidebarLink) {
+                renderCustomerView(sidebarLink.dataset.view);
+                return;
+            }
+
+            const restaurantCard = e.target.closest('.restaurant-card');
+            if (restaurantCard) {
+                renderCustomerRestaurantView(restaurantCard.dataset.id);
+                return;
+            }
+
+            const actionButton = e.target.closest('[data-action]');
+            if(actionButton) {
+                const { action, restaurantId, restaurantName, itemId, itemName, itemPrice, orderId } = actionButton.dataset;
+                switch(action) {
+                    case 'back-to-home': renderCustomerView('home'); break;
+                    case 'add-to-cart': addToCart(itemId, itemName, parseFloat(itemPrice), restaurantId, restaurantName); break;
+                    case 'place-order': handlePlaceOrder(actionButton.form); break;
+                    case 'view-bill': renderOrderBill(orderId); break;
+                }
+            }
+        }
+        
+        function renderCustomerView(viewName) {
+            const nav = document.getElementById('customer-nav');
+             if (nav) {
+                 nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+                 const activeLink = nav.querySelector(`[data-view="${viewName}"]`);
+                 if (activeLink) activeLink.classList.add('active');
+            }
+            
+            const contentArea = document.getElementById('customer-main-content');
+            cartButton.classList.add('hidden');
+
+            switch(viewName) {
+                case 'home': renderCustomerHomepage(contentArea); break;
+                case 'orders': renderCustomerOrdersView(contentArea); break;
+                case 'profile': renderCustomerProfile(contentArea); break;
+            }
+        }
+
+        async function renderCustomerHomepage(contentArea) {
+             cartButton.classList.remove('hidden');
+             contentArea.innerHTML = `
+                <div class="space-y-8">
+                    <div class="text-center p-8 bg-white rounded-xl shadow-md">
+                         <h2 class="text-4xl font-bold font-serif">${siteSettings.heroTitle || 'Find Your Next Meal'}</h2>
+                         <p class="text-gray-600 mt-2">${siteSettings.heroSubtitle || 'The best restaurants, delivered to your doorstep.'}</p>
+                         <div class="mt-6 max-w-lg mx-auto">
+                             <input type="search" id="restaurant-search" class="input-field w-full p-4 rounded-full" placeholder="Search for restaurants or cuisines...">
+                         </div>
+                    </div>
+                    <div id="all-restaurants-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+             `;
+             
+             const allListEl = document.getElementById('all-restaurants-list');
+             db.collection('restaurants').get().then(snapshot => {
+                 if(snapshot.empty) {
+                      allListEl.innerHTML = '<p>No restaurants available right now.</p>';
+                      return;
+                 }
+                 allListEl.innerHTML = snapshot.docs.map(doc => renderRestaurantCard(doc)).join('');
+                 feather.replace();
+             });
+
+             document.getElementById('restaurant-search').addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const restaurantCards = document.querySelectorAll('#all-restaurants-list .restaurant-card');
+                restaurantCards.forEach(card => {
+                    const name = card.querySelector('h3').textContent.toLowerCase();
+                    const cuisine = card.querySelector('p').textContent.toLowerCase();
+                    if (name.includes(searchTerm) || cuisine.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+             });
+        }
+        
+        function renderRestaurantCard(doc) {
+            const r = doc.data();
+            const firstImage = r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls[0] : 'https://placehold.co/400x250?text=UniFood';
+            return `
+                <div data-id="${doc.id}" class="restaurant-card bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer">
+                    <img src="${firstImage}" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="font-bold text-xl font-serif">${r.name}</h3>
+                        <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
+                        <div class="flex items-center mt-2 text-sm text-gray-700">
+                           <i data-feather="star" class="w-4 h-4 fill-current text-yellow-500"></i>
+                           <span class="ml-1 font-bold">4.5</span>
+                           <span class="mx-2">|</span>
+                           <span>30-40 min</span>
+                        </div>
+                    </div>
+                </div>`;
+        }
+        
+        async function renderCustomerRestaurantView(restaurantId) {
+            const contentArea = document.getElementById('customer-main-content');
+            contentArea.innerHTML = `<p>Loading restaurant...</p>`;
+            const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
+            if(!restaurantDoc.exists) {
+                contentArea.innerHTML = `<p>Restaurant not found.</p>`;
+                return;
+            }
+            const restaurant = restaurantDoc.data();
+            const menuSnapshot = await db.collection('restaurants').doc(restaurantId).collection('menu').get();
+            
+            let menuHtml = 'No menu items found.';
+            if(!menuSnapshot.empty) {
+                menuHtml = menuSnapshot.docs.map(doc => {
+                    const item = doc.data();
+                    const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
+                    return `
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                             <img src="${itemImage}" class="w-20 h-20 object-cover rounded-md mr-4">
+                            <div class="flex-grow">
+                                <p class="font-semibold">${item.name}</p>
+                                <p class="text-sm text-gray-600">${item.description}</p>
+                                <p class="font-bold mt-1">₹${item.price}</p>
+                            </div>
+                            <button data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${item.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="btn btn-secondary">Add to Cart</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            contentArea.innerHTML = `
+                <div>
+                    <button data-action="back-to-home" class="btn bg-white mb-4 flex items-center gap-2"><i data-feather="arrow-left"></i>Back to Restaurants</button>
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-4xl font-bold font-serif">${restaurant.name}</h2>
+                        <p class="text-gray-600 mt-1">${restaurant.cuisine}</p>
+                        <div class="mt-6">
+                            <h3 class="text-2xl font-bold font-serif mb-4">Menu</h3>
+                            <div class="space-y-4">${menuHtml}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            feather.replace();
+        }
+
+        async function renderCustomerOrdersView(contentArea) {
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">My Orders</h2>
+                <div id="customer-orders-list" class="space-y-4"></div>
+            `;
+            const listEl = document.getElementById('customer-orders-list');
+            const unsub = db.collection('orders')
+                .where('customerId', '==', currentUser.uid)
+                .onSnapshot(snapshot => {
+                    if (snapshot.empty) {
+                        listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">You have no orders.</p>';
+                        return;
+                    }
+                    const sortedDocs = snapshot.docs.sort((a, b) => b.data().createdAt.seconds - a.data().createdAt.seconds);
+                    listEl.innerHTML = sortedDocs.map(doc => renderCustomerOrderCard(doc.id, doc.data())).join('');
+                    feather.replace();
+                });
+            unsubscribeListeners.push(unsub);
+        }
+
+        function renderCustomerOrderCard(orderId, orderData) {
+            const statusMap = {
+                'placed': { text: 'Order Placed', color: 'bg-gray-500', progress: '20%' },
+                'accepted': { text: 'Preparing Food', color: 'bg-blue-500', progress: '40%' },
+                'picked-up': { text: 'On The Way', color: 'bg-yellow-500', progress: '70%' },
+                'delivered': { text: 'Delivered', color: 'bg-green-500', progress: '100%' },
+                'cancelled': { text: 'Cancelled', color: 'bg-red-500', progress: '100%' },
+            };
+            const currentStatus = statusMap[orderData.status] || statusMap['placed'];
+
+            return `
+                <div class="bg-white p-5 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold text-lg">${orderData.restaurantName}</p>
+                            <p class="text-sm text-gray-500">Order #${orderId.substring(0,6)}</p>
+                        </div>
+                        <p class="font-bold">₹${orderData.totalPrice.toFixed(2)}</p>
+                    </div>
+                     <div class="mt-4 border-t pt-4">
+                        <p class="font-semibold mb-2">Items:</p>
+                        ${orderData.items.map(item => `<p class="text-sm text-gray-600">${item.quantity} x ${item.name}</p>`).join('')}
+                    </div>
+                    <div class="mt-4">
+                        <p class="font-semibold text-sm mb-1">${currentStatus.text}</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="${currentStatus.color} h-2.5 rounded-full" style="width: ${currentStatus.progress}"></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-right">
+                        <button data-action="view-bill" data-order-id="${orderId}" class="btn btn-primary">View Bill</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCustomerProfile(contentArea) {
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">My Profile</h2>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <form id="customer-profile-form" class="space-y-4">
+                        <div>
+                            <label for="profile-name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <input type="text" id="profile-name" class="input-field mt-1 block w-full" value="${currentUser.name}" required>
+                        </div>
+                        <div>
+                            <label for="profile-mobile" class="block text-sm font-medium text-gray-700">Mobile Number</label>
+                            <input type="tel" id="profile-mobile" class="input-field mt-1 block w-full" value="${currentUser.mobile}" required>
+                        </div>
+                         <div>
+                            <label for="profile-address" class="block text-sm font-medium text-gray-700">Default Delivery Address</label>
+                            <textarea id="profile-address" class="input-field mt-1 block w-full" rows="3">${currentUser.address || ''}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary py-3 px-6 rounded-lg">Update Profile</button>
+                    </form>
+                </div>
+            `;
+            
+            document.getElementById('customer-profile-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                const name = document.getElementById('profile-name').value;
+                const mobile = document.getElementById('profile-mobile').value;
+                const address = document.getElementById('profile-address').value;
+                await db.collection('users').doc(currentUser.uid).update({ name, mobile, address });
+                currentUser.name = name;
+                currentUser.mobile = mobile;
+                currentUser.address = address;
+                showSimpleModal('Success', 'Profile updated successfully!');
+            });
+        }
+
+        // --- CART LOGIC ---
+        function addToCart(itemId, itemName, itemPrice, restaurantId, restaurantName) {
+            if (cart.length > 0 && cart[0].restaurantId !== restaurantId) {
+                showConfirmationModal(
+                    "Start New Order?",
+                    "Your cart has items from another restaurant. Clear the cart to add items from this restaurant?",
+                    () => {
+                        cart = []; // Clear cart
+                        cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1, restaurantId, restaurantName });
+                        updateCartButton();
+                    }
+                );
+                return;
+            }
+
+            const existingItem = cart.find(item => item.id === itemId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1, restaurantId, restaurantName });
+            }
+            updateCartButton();
+        }
+
+        function removeFromCart(itemId) {
+            const itemIndex = cart.findIndex(item => item.id === itemId);
+            if (itemIndex > -1) {
+                cart[itemIndex].quantity--;
+                if (cart[itemIndex].quantity === 0) {
+                    cart.splice(itemIndex, 1);
+                }
+            }
+            updateCartButton();
+            if (cart.length === 0) {
+                closeModal();
+            } else {
+                renderCartView(); // Re-render the cart modal
+            }
+        }
+
+        function updateCartButton() {
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCountEl.textContent = totalItems;
+            if (totalItems > 0) {
+                cartButton.classList.remove('hidden');
+            } else {
+                cartButton.classList.add('hidden');
+            }
+        }
+
+        function renderCartView() {
+            if (cart.length === 0) {
+                showSimpleModal("Empty Cart", "Your shopping cart is empty.");
+                return;
+            }
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const total = subtotal; // No delivery fee
+
+            const cartHtml = `
+                <form id="order-form">
+                    <h3 class="text-2xl font-bold font-serif mb-4">Your Order</h3>
+                    <p class="font-semibold mb-4">${cart[0].restaurantName}</p>
+                    <div class="space-y-3 mb-4 max-h-60 overflow-y-auto">
+                        ${cart.map(item => `
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">${item.name}</p>
+                                    <p class="text-sm text-gray-500">Qty: ${item.quantity}</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <p>₹${(item.price * item.quantity).toFixed(2)}</p>
+                                    <button type="button" data-action="remove-from-cart" data-item-id="${item.id}" class="btn btn-danger p-1 rounded-full">
+                                        <i data-feather="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="border-t pt-4 space-y-2">
+                        <div class="flex justify-between"><p>Subtotal</p><p>₹${subtotal.toFixed(2)}</p></div>
+                        <div class="flex justify-between font-bold text-lg"><p>Grand Total</p><p>₹${total.toFixed(2)}</p></div>
+                    </div>
+                    <div class="mt-6">
+                        <label for="delivery-address" class="block text-sm font-medium text-gray-700">Delivery Address</label>
+                        <textarea id="delivery-address" name="deliveryAddress" class="input-field mt-1 block w-full" rows="3" required>${currentUser.address || ''}</textarea>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" data-action="place-order" class="btn btn-primary w-full py-3 rounded-lg">Place Order</button>
+                        <button type="button" class="btn bg-gray-200 w-full py-3 rounded-lg mt-2" onclick="closeModal()">Close</button>
+                    </div>
+                </form>
+            `;
+            showModal(cartHtml);
+            document.getElementById('order-form').addEventListener('submit', e => {
+                e.preventDefault();
+                handlePlaceOrder(e.target);
+            });
+        }
+
+        async function handlePlaceOrder(form) {
+            const deliveryAddress = form.elements.deliveryAddress.value;
+            if (!deliveryAddress) {
+                showSimpleModal("Address Required", "Delivery address is required to place an order.");
+                return;
+            }
+
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const total = subtotal;
+            const deliveryPayout = 30.00; // Fixed payout for delivery partner
+
+            const orderData = {
+                customerId: currentUser.uid,
+                customerName: currentUser.name,
+                deliveryAddress: deliveryAddress,
+                restaurantId: cart[0].restaurantId,
+                restaurantName: cart[0].restaurantName,
+                items: cart.map(item => ({...item})),
+                subtotal: subtotal,
+                deliveryPayout: deliveryPayout,
+                totalPrice: total,
+                status: 'placed',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                deliveryBoyId: null
+            };
+
+            try {
+                await db.collection('orders').add(orderData);
+                showSimpleModal('Order Placed!', 'Your order has been placed successfully.');
+                cart = [];
+                updateCartButton();
+                closeModal();
+                renderCustomerView('orders');
+            } catch (error) {
+                console.error("Error placing order: ", error);
+                showSimpleModal('Order Error', 'There was an error placing your order. Please try again.');
+            }
+        }
+
+        // --- DELIVERY PORTAL ---
+        function initializeDeliveryPortal() {
+            activePortalHandler = handleDeliveryClicks;
+            mainContent.addEventListener('click', activePortalHandler);
+            renderDeliveryView('available-orders');
+        }
+
+        function handleDeliveryClicks(e) {
+            const sidebarLink = e.target.closest('.sidebar-link');
+            if (sidebarLink) {
+                renderDeliveryView(sidebarLink.dataset.view);
+                return;
+            }
+            
+            const actionButton = e.target.closest('[data-action]');
+            if(actionButton) {
+                const { action, orderId, newStatus } = actionButton.dataset;
+                if(action === 'update-order-status') {
+                    updateOrderStatus(orderId, newStatus);
+                }
+                if(action === 'toggle-online-status') {
+                    toggleOnlineStatus();
+                }
+                 if(action === 'accept-delivery') {
+                    acceptDelivery(orderId);
+                }
+            }
+        }
+        
+        function renderDeliveryView(viewName) {
+            const nav = document.getElementById('delivery-nav');
+             if (nav) {
+                 nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+                 const activeLink = nav.querySelector(`[data-view="${viewName}"]`);
+                 if (activeLink) activeLink.classList.add('active');
+            }
+            
+            const contentArea = document.getElementById('delivery-main-content');
+            if (!contentArea) return;
+            
+            switch(viewName) {
+                case 'available-orders': renderAvailableOrders(contentArea); break;
+                case 'assigned-orders': renderDeliveryOrders(contentArea, false); break;
+                case 'delivery-history': renderDeliveryOrders(contentArea, true); break;
+                case 'earnings': renderDeliveryEarnings(contentArea); break;
+                case 'profile': renderDeliveryProfile(contentArea); break;
+            }
+        }
+
+        function renderAvailableOrders(contentArea) {
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Available Orders</h2>
+                <div id="available-orders-list" class="space-y-4"></div>
+            `;
+            const listEl = document.getElementById('available-orders-list');
+
+            const unsub = db.collection('orders')
+                .where('status', '==', 'accepted')
+                .where('deliveryBoyId', '==', null)
+                .onSnapshot(snapshot => {
+                    if (snapshot.empty) {
+                        listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">No available orders right now. Check back soon!</p>';
+                        return;
+                    }
+                    listEl.innerHTML = snapshot.docs.map(doc => {
+                        const order = doc.data();
+                        return `
+                            <div class="bg-white p-5 rounded-xl shadow-md">
+                                <p class="font-bold text-lg">${order.restaurantName}</p>
+                                <p class="text-sm text-gray-500">To: ${order.deliveryAddress}</p>
+                                <p class="font-semibold mt-2">Payout: ₹${(order.deliveryPayout || 30).toFixed(2)}</p>
+                                <button data-action="accept-delivery" data-order-id="${doc.id}" class="btn btn-primary w-full mt-4">Accept Delivery</button>
+                            </div>
+                        `;
+                    }).join('');
+                });
+            unsubscribeListeners.push(unsub);
+        }
+
+        async function acceptDelivery(orderId) {
+            const orderRef = db.collection('orders').doc(orderId);
+
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const orderDoc = await transaction.get(orderRef);
+                    if (!orderDoc.exists) {
+                        throw "Order does not exist!";
+                    }
+
+                    if (orderDoc.data().deliveryBoyId !== null) {
+                        throw "Order has already been taken.";
+                    }
+
+                    transaction.update(orderRef, { 
+                        deliveryBoyId: currentUser.uid,
+                        deliveryBoyName: currentUser.name
+                    });
+                });
+                showSimpleModal("Success", "Order assigned to you!");
+                renderDeliveryView('assigned-orders');
+            } catch (e) {
+                console.error("Transaction failed: ", e);
+                showSimpleModal("Error", "Could not accept order: " + e);
+            }
+        }
+        
+        function renderDeliveryOrders(contentArea, isHistory) {
+            const title = isHistory ? 'Delivery History' : 'My Active Deliveries';
+            const statuses = isHistory ? ['delivered', 'cancelled'] : ['accepted', 'picked-up'];
+            
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">${title}</h2>
+                <div id="delivery-orders-list" class="space-y-4"></div>
+            `;
+            const listEl = document.getElementById('delivery-orders-list');
+            
+            const unsub = db.collection('orders')
+                .where('deliveryBoyId', '==', currentUser.uid)
+                .where('status', 'in', statuses)
+                .onSnapshot(snapshot => {
+                    if(snapshot.empty) {
+                        listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">No orders found.</p>';
+                        return;
+                    }
+                    const sortedDocs = snapshot.docs.sort((a, b) => b.data().createdAt.seconds - a.data().createdAt.seconds);
+                    listEl.innerHTML = sortedDocs.map(doc => renderOrderCard(doc.id, doc.data())).join('');
+                    feather.replace();
+                });
+            unsubscribeListeners.push(unsub);
+        }
+        
+        function renderOrderCard(orderId, orderData) {
+            const statusColors = {
+                'accepted': 'bg-blue-100 text-blue-800',
+                'picked-up': 'bg-yellow-100 text-yellow-800',
+                'delivered': 'bg-green-100 text-green-800',
+                'cancelled': 'bg-red-100 text-red-800',
+            };
+            
+            let actionButton = '';
+            if(orderData.status === 'accepted') {
+                actionButton = `<button data-action="update-order-status" data-order-id="${orderId}" data-new-status="picked-up" class="btn btn-secondary w-full mt-4">Mark as Picked Up</button>`;
+            } else if (orderData.status === 'picked-up') {
+                actionButton = `<button data-action="update-order-status" data-order-id="${orderId}" data-new-status="delivered" class="btn btn-primary w-full mt-4">Mark as Delivered</button>`;
+            }
+
+            return `
+                <div class="bg-white p-5 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-500">Order #${orderId.substring(0,6)}</p>
+                            <p class="font-bold text-lg">${orderData.restaurantName || 'Restaurant Name'}</p>
+                        </div>
+                        <span class="status-badge ${statusColors[orderData.status] || 'bg-gray-100 text-gray-800'}">${orderData.status}</span>
+                    </div>
+                    <div class="mt-4 border-t pt-4">
+                        <p><strong>Customer:</strong> ${orderData.customerName || 'N/A'}</p>
+                        <p><strong>Address:</strong> ${orderData.deliveryAddress || 'N/A'}</p>
+                    </div>
+                    ${actionButton}
+                </div>
+            `;
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
+            const orderRef = db.collection('orders').doc(orderId);
+            await orderRef.update({ status: newStatus });
+
+            if(newStatus === 'delivered') {
+                const orderDoc = await orderRef.get();
+                const deliveryPayout = orderDoc.data().deliveryPayout || 30; // Default payout
+                const deliveryBoyRef = db.collection('users').doc(currentUser.uid);
+                await deliveryBoyRef.update({
+                    earnings: firebase.firestore.FieldValue.increment(deliveryPayout)
+                });
+            }
+        }
+        
+        async function renderDeliveryEarnings(contentArea) {
+             contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">Earnings</h2><p>Loading...</p>`;
+             const userDoc = await db.collection('users').doc(currentUser.uid).get();
+             const earnings = userDoc.data().earnings || 0;
+             const completedOrdersSnapshot = await db.collection('orders').where('deliveryBoyId', '==', currentUser.uid).where('status', '==', 'delivered').get();
+             
+             contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Earnings</h2>
+                <div class="bg-white p-6 rounded-xl shadow-md text-center mb-6">
+                    <h4 class="text-lg font-semibold text-gray-500">Total Earned</h4>
+                    <p class="text-5xl font-bold text-gray-800 mt-2">₹${earnings.toFixed(2)}</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="font-bold font-serif text-xl mb-4">Completed Deliveries (${completedOrdersSnapshot.size})</h3>
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        ${completedOrdersSnapshot.docs.map(doc => {
+                            const order = doc.data();
+                            return `<div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                        <p>Order #${doc.id.substring(0,6)}</p>
+                                        <p class="font-semibold">+ ₹${(order.deliveryPayout || 30).toFixed(2)}</p>
+                                    </div>`;
+                        }).join('') || '<p>No completed deliveries yet.</p>'}
+                    </div>
+                </div>
+             `;
+        }
+        
+        function renderDeliveryProfile(contentArea) {
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Profile</h2>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div id="delivery-profile-status" class="mb-6 pb-6 border-b"></div>
+                    <form id="delivery-profile-form" class="space-y-4">
+                        <div>
+                            <label for="profile-name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <input type="text" id="profile-name" class="input-field mt-1 block w-full" value="${currentUser.name}" required>
+                        </div>
+                        <div>
+                            <label for="profile-mobile" class="block text-sm font-medium text-gray-700">Mobile Number</label>
+                            <input type="tel" id="profile-mobile" class="input-field mt-1 block w-full" value="${currentUser.mobile}" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary py-3 px-6 rounded-lg">Update Profile</button>
+                    </form>
+                </div>
+            `;
+            renderDeliveryProfileStatus(document.getElementById('delivery-profile-status'));
+            
+            document.getElementById('delivery-profile-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                const name = document.getElementById('profile-name').value;
+                const mobile = document.getElementById('profile-mobile').value;
+                await db.collection('users').doc(currentUser.uid).update({ name, mobile });
+                currentUser.name = name;
+                currentUser.mobile = mobile;
+                showSimpleModal('Success', 'Profile updated successfully!');
+            });
+        }
+        
+        function renderDeliveryProfileStatus(container) {
+            const unsub = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+                const userData = doc.data();
+                currentUser.isOnline = userData.isOnline;
+                const isOnline = userData.isOnline || false;
+                const statusText = isOnline ? 'You are Online' : 'You are Offline';
+                const statusColor = isOnline ? 'text-green-600' : 'text-red-600';
+                const buttonText = isOnline ? 'Go Offline' : 'Go Online';
+                const buttonClass = isOnline ? 'btn-danger' : 'btn-primary';
+                
+                container.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold text-lg ${statusColor}">${statusText}</p>
+                            <p class="text-sm text-gray-500">${isOnline ? 'You can now receive new delivery requests.' : 'Go online to start receiving orders.'}</p>
+                        </div>
+                        <button data-action="toggle-online-status" class="btn ${buttonClass} py-2 px-5 rounded-lg">${buttonText}</button>
+                    </div>
+                `;
+            });
+            unsubscribeListeners.push(unsub);
+        }
+
+        async function toggleOnlineStatus() {
+            const newStatus = !currentUser.isOnline;
+            await db.collection('users').doc(currentUser.uid).update({ isOnline: newStatus });
+        }
+
+
+        // --- RESTAURANT PORTAL ---
+        function initializeRestaurantPortal() {
+            activePortalHandler = handleRestaurantClicks;
+            mainContent.addEventListener('click', activePortalHandler);
+            renderRestaurantView('dashboard');
+        }
+
+        function handleRestaurantClicks(e) {
+            const sidebarLink = e.target.closest('.sidebar-link');
+            if (sidebarLink) {
+                renderRestaurantView(sidebarLink.dataset.view);
+                return;
+            }
+
+            const actionButton = e.target.closest('[data-action]');
+            if(actionButton) {
+                const { action, orderId, itemId } = actionButton.dataset;
+                const restaurantId = currentUser.restaurantId;
+                switch(action) {
+                    case 'accept-order': acceptOrder(orderId); break;
+                    case 'add-menu-item': showMenuItemForm(restaurantId); break;
+                    case 'edit-menu-item': showMenuItemForm(restaurantId, itemId); break;
+                    case 'delete-menu-item': handleDeleteMenuItem(restaurantId, itemId); break;
+                }
+            }
+        }
+
+        function renderRestaurantView(viewName) {
+            const nav = document.getElementById('restaurant-nav');
+            if (nav) {
+                nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+                nav.querySelector(`[data-view="${viewName}"]`).classList.add('active');
+            }
+            const contentArea = document.getElementById('restaurant-main-content');
+            
+            switch(viewName) {
+                case 'dashboard': renderRestaurantDashboard(contentArea); break;
+                case 'orders': renderRestaurantOrders(contentArea); break;
+                case 'menu': renderRestaurantMenu(contentArea); break;
+                case 'profile': renderRestaurantProfile(contentArea); break;
+            }
+        }
+
+        async function renderRestaurantDashboard(contentArea) {
+            contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">Dashboard</h2><p>Loading stats...</p>`;
+            const restaurantId = currentUser.restaurantId;
+            if (!restaurantId) {
+                contentArea.innerHTML = `<p>Error: No restaurant associated with this account.</p>`;
+                return;
+            }
+
+            const ordersSnapshot = await db.collection('orders').where('restaurantId', '==', restaurantId).get();
+            const totalRevenue = ordersSnapshot.docs.reduce((sum, doc) => sum + doc.data().totalPrice, 0);
+
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                        <h4 class="text-lg font-semibold text-gray-500">Total Orders</h4>
+                        <p class="text-4xl font-bold text-gray-800 mt-2">${ordersSnapshot.size}</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                        <h4 class="text-lg font-semibold text-gray-500">Total Revenue</h4>
+                        <p class="text-4xl font-bold text-gray-800 mt-2">₹${totalRevenue.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function renderRestaurantOrders(contentArea) {
+            const restaurantId = currentUser.restaurantId;
+             contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Order Management</h2>
+                <div id="restaurant-orders-list" class="space-y-4"></div>
+            `;
+            const listEl = document.getElementById('restaurant-orders-list');
+
+            const unsub = db.collection('orders')
+                .where('restaurantId', '==', restaurantId)
+                .where('status', '==', 'placed')
+                .onSnapshot(snapshot => {
+                    if (snapshot.empty) {
+                        listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">No new orders.</p>';
+                        return;
+                    }
+                    listEl.innerHTML = snapshot.docs.map(doc => {
+                        const order = doc.data();
+                        return `
+                            <div class="bg-white p-5 rounded-xl shadow-md">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-bold text-lg">Order #${doc.id.substring(0,6)}</p>
+                                        <p class="text-sm text-gray-500">From: ${order.customerName}</p>
+                                    </div>
+                                    <p class="font-bold text-lg">₹${order.totalPrice.toFixed(2)}</p>
+                                </div>
+                                <div class="mt-4 border-t pt-4">
+                                    <p class="font-semibold">Items:</p>
+                                    <ul class="list-disc list-inside text-sm text-gray-600">
+                                        ${order.items.map(item => `<li>${item.quantity} x ${item.name}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                <button data-action="accept-order" data-order-id="${doc.id}" class="btn btn-primary w-full mt-4">Accept Order</button>
+                            </div>
+                        `;
+                    }).join('');
+                });
+            unsubscribeListeners.push(unsub);
+        }
+
+        async function acceptOrder(orderId) {
+            await db.collection('orders').doc(orderId).update({
+                status: 'accepted'
+            });
+            showSimpleModal('Order Accepted', `Order accepted and is now available for delivery partners.`);
+        }
+
+        async function renderRestaurantMenu(contentArea) {
+            const restaurantId = currentUser.restaurantId;
+            contentArea.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold font-serif">Menu Management</h2>
+                    <button data-action="add-menu-item" class="btn btn-primary rounded-lg py-2 px-4 flex items-center gap-2">
+                        <i data-feather="plus" class="w-5 h-5"></i>Add Item
+                    </button>
+                </div>
+                <div id="restaurant-menu-list" class="space-y-3"></div>
+            `;
+            feather.replace();
+            const listEl = document.getElementById('restaurant-menu-list');
+            
+            const unsub = db.collection('restaurants').doc(restaurantId).collection('menu').onSnapshot(snapshot => {
+                 if (snapshot.empty) {
+                    listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">Your menu is empty. Click "Add Item" to start.</p>';
+                    return;
+                 }
+                 listEl.innerHTML = snapshot.docs.map(doc => renderMenuItemCard(doc, restaurantId)).join('');
+                 feather.replace();
+            });
+            unsubscribeListeners.push(unsub);
+        }
+        
+        async function renderRestaurantProfile(contentArea) {
+             const restaurantId = currentUser.restaurantId;
+             const restDoc = await db.collection('restaurants').doc(restaurantId).get();
+             const restaurant = restDoc.data();
+             contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Restaurant Profile</h2>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <form id="restaurant-profile-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium">Name</label>
+                            <input type="text" name="name" class="input-field w-full" value="${restaurant.name}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Cuisine</label>
+                            <input type="text" name="cuisine" class="input-field w-full" value="${restaurant.cuisine}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Address</label>
+                            <textarea name="address" class="input-field w-full" rows="3" required>${restaurant.address}</textarea>
+                        </div>
+                        <div class="flex justify-start gap-4 pt-4">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="button" id="change-password-btn" class="btn btn-secondary">Change Password</button>
+                        </div>
+                    </form>
+                </div>`;
+            
+            document.getElementById('restaurant-profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const updatedData = {
+                    name: form.elements.name.value,
+                    cuisine: form.elements.cuisine.value,
+                    address: form.elements.address.value,
+                };
+                await db.collection('restaurants').doc(restaurantId).update(updatedData);
+                showSimpleModal("Success", "Restaurant profile updated successfully!");
+            });
+
+            document.getElementById('change-password-btn').addEventListener('click', () => {
+                showConfirmationModal(
+                    'Change Password?',
+                    'A password reset link will be sent to your registered email address.',
+                    () => {
+                        auth.sendPasswordResetEmail(currentUser.email)
+                            .then(() => showSimpleModal('Email Sent', 'Password reset email has been sent.'))
+                            .catch(err => showSimpleModal('Error', err.message));
+                    }
+                )
+            });
+        }
+
+
+        // --- ADMIN PORTAL ---
+        function initializeAdminPortal() {
+            activePortalHandler = handleAdminClicks;
+            mainContent.addEventListener('click', activePortalHandler);
+            document.getElementById('admin-main-content')?.addEventListener('click', handleAdminClicks);
+            renderAdminView('dashboard');
+        }
+
+        function handleAdminClicks(e) {
+            const sidebarLink = e.target.closest('.sidebar-link');
+            if (sidebarLink) {
+                renderAdminView(sidebarLink.dataset.view);
+                return;
+            }
+            
+            const restaurantCard = e.target.closest('.restaurant-admin-card');
+            if (restaurantCard) {
+                renderAdminRestaurantDetailsView(restaurantCard.dataset.id);
+                return;
+            }
+
+            const deliveryBoyRow = e.target.closest('.delivery-boy-row');
+            if (deliveryBoyRow) {
+                renderDeliveryBoyDetailsView(deliveryBoyRow.dataset.id);
+                return;
+            }
+            
+            const actionButton = e.target.closest('[data-action]');
+            if (actionButton) {
+                e.preventDefault(); 
+                const { action, id, itemId, orderId } = actionButton.dataset;
+                switch(action) {
+                    case 'add-restaurant': showAddRestaurantForm(); break;
+                    case 'add-delivery-boy': showAddDeliveryBoyForm(); break;
+                    case 'edit-restaurant': showEditRestaurantForm(id); break;
+                    case 'change-password': handleChangeRestaurantPassword(id); break;
+                    case 'toggle-lock': handleToggleLock(id); break;
+                    case 'manage-menu': renderAdminMenuManagementView(id); break;
+                    case 'back-to-restaurants': renderAdminView('restaurants'); break;
+                    case 'back-to-delivery-boys': renderAdminView('delivery-boys'); break;
+                    case 'back-to-restaurant-details': renderAdminRestaurantDetailsView(id); break;
+                    case 'add-menu-item': showMenuItemForm(id); break;
+                    case 'edit-menu-item': showMenuItemForm(id, itemId); break;
+                    case 'delete-menu-item': handleDeleteMenuItem(id, itemId); break;
+                    case 'view-bill': renderOrderBill(orderId); break;
+                    case 'change-delivery-boy-password': handleChangeDeliveryBoyPassword(id); break;
+                    case 'toggle-delivery-boy-lock': handleToggleDeliveryBoyLock(id); break;
+                    case 'remove-delivery-boy': handleRemoveDeliveryBoy(id); break;
+                }
+            }
+        }
+        
+        function renderAdminView(viewName, contentAreaId = 'admin-main-content') {
+            const nav = document.getElementById('admin-nav');
+            if (nav) {
+                nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+                const activeLink = nav.querySelector(`[data-view="${viewName}"]`);
+                if(activeLink) activeLink.classList.add('active');
+            }
+            const contentArea = document.getElementById(contentAreaId);
+            if (!contentArea) return; 
+            switch(viewName) {
+                case 'dashboard': renderAdminDashboardView(contentArea); break;
+                case 'restaurants': renderAdminRestaurantsListView(contentArea); break;
+                case 'orders': renderAdminOrdersView(contentArea); break;
+                case 'users': renderAdminUsersView(contentArea); break;
+                case 'delivery-boys': renderDeliveryBoysView(contentArea); break;
+            }
+        }
+
+        async function renderAdminDashboardView(contentArea) {
+             contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">Dashboard</h2><p>Loading stats...</p>`;
+             const [ordersSnapshot, usersSnapshot, restaurantsSnapshot] = await Promise.all([
+                 db.collection('orders').get(),
+                 db.collection('users').get(),
+                 db.collection('restaurants').get()
+             ]);
+             
+             const totalRevenue = ordersSnapshot.docs.reduce((sum, doc) => sum + (doc.data().totalPrice || 0), 0);
+             contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Revenue</h4><p class="text-3xl font-bold text-gray-800 mt-2">₹${totalRevenue.toFixed(2)}</p></div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Orders</h4><p class="text-3xl font-bold text-gray-800 mt-2">${ordersSnapshot.size}</p></div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Users</h4><p class="text-3xl font-bold text-gray-800 mt-2">${usersSnapshot.size}</p></div>
+                    <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Restaurants</h4><p class="text-3xl font-bold text-gray-800 mt-2">${restaurantsSnapshot.size}</p></div>
+                </div>
+             `;
+        }
+
+        async function renderAdminRestaurantsListView(contentArea) {
+             contentArea.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold font-serif">Restaurants</h2>
+                     <button data-action="add-restaurant" class="btn btn-primary rounded-lg py-2 px-4 flex items-center gap-2">
+                         <i data-feather="plus" class="w-5 h-5"></i>Add Restaurant
+                    </button>
+                </div>
+                <div id="admin-restaurant-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>`;
+            feather.replace();
+            const listEl = document.getElementById('admin-restaurant-list');
+            const snapshot = await db.collection('restaurants').get();
+            if (snapshot.empty) {
+                listEl.innerHTML = '<p class="col-span-full text-center">No restaurants found.</p>';
+                return;
+            }
+            listEl.innerHTML = snapshot.docs.map(doc => {
+                 const r = doc.data();
+                const firstImage = r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls[0] : 'https://placehold.co/400x250?text=UniFood';
+                return `
+                    <div data-id="${doc.id}" class="restaurant-admin-card bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer">
+                        <img src="${firstImage}" class="w-full h-40 object-cover">
+                        <div class="p-5">
+                            <h3 class="font-bold text-xl font-serif">${r.name}</h3>
+                            <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function renderAdminRestaurantDetailsView(restaurantId) {
+            const contentArea = document.getElementById('admin-main-content');
+            contentArea.innerHTML = `<p>Loading details...</p>`;
+            const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
+            if (!restaurantDoc.exists) return;
+            const restaurant = { id: restaurantDoc.id, ...restaurantDoc.data() };
+            
+            let ownerUsername = 'N/A';
+            if (restaurant.ownerId) {
+                const ownerDoc = await db.collection('users').doc(restaurant.ownerId).get();
+                if (ownerDoc.exists) ownerUsername = ownerDoc.data().email;
+            }
+
+            const lockButtonText = restaurant.isLocked ? 'Unlock Account' : 'Lock Account';
+            const lockButtonClass = restaurant.isLocked ? 'btn-primary' : 'btn-danger';
+
+            contentArea.innerHTML = `
+                 <div class="mb-6">
+                     <button data-action="back-to-restaurants" class="btn bg-white rounded-lg py-2 px-4 flex items-center gap-2 shadow-sm hover:shadow-md">
+                         <i data-feather="arrow-left" class="w-5 h-5"></i> Back to Restaurants
+                     </button>
+                 </div>
+                 <div class="bg-white p-6 rounded-xl shadow-md">
+                     <div class="flex justify-between items-start">
+                         <div>
+                             <h2 class="text-3xl font-bold font-serif">${restaurant.name}</h2>
+                             <p class="text-gray-600 mt-1">${restaurant.cuisine}</p>
+                         </div>
+                         <div class="flex gap-2 flex-wrap">
+                             <button data-action="manage-menu" data-id="${restaurant.id}" class="btn btn-primary">Manage Menu</button>
+                             <button data-action="edit-restaurant" data-id="${restaurant.id}" class="btn btn-secondary">Edit Details</button>
+                         </div>
+                     </div>
+                     <div class="mt-6 border-t pt-4 space-y-2">
+                         <p><strong>Address:</strong> ${restaurant.address}</p>
+                         <p><strong>Restaurant ID:</strong> ${restaurant.id}</p>
+                         <p><strong>Owner ID:</strong> ${restaurant.ownerId || 'Not assigned'}</p>
+                         <div class="bg-gray-100 p-4 rounded-lg mt-4">
+                             <h4 class="font-semibold">Owner Credentials</h4>
+                             <p><strong>Username:</strong> ${ownerUsername}</p>
+                             <p><strong>Password:</strong> <span class="text-red-500 font-mono">${restaurant.initialPassword || 'Set by user'}</span></p>
+                             <p class="text-xs text-gray-500 mt-1">This is the initial password. For security, it's recommended to change it.</p>
+                             <button data-action="change-password" data-id="${restaurant.id}" class="btn btn-danger text-sm mt-2 py-1 px-3">Change Password</button>
+                         </div>
+                          <div class="bg-yellow-100 p-4 rounded-lg mt-4">
+                             <h4 class="font-semibold">Account Status</h4>
+                             <p>This account is currently <strong>${restaurant.isLocked ? 'Locked' : 'Active'}</strong>.</p>
+                             <button data-action="toggle-lock" data-id="${restaurant.id}" class="btn ${lockButtonClass} text-sm mt-2 py-1 px-3">${lockButtonText}</button>
+                         </div>
+                     </div>
+                 </div>
+            `;
+            feather.replace();
+        }
+        
+        async function showAddRestaurantForm() {
+            const formHtml = `
+                <form id="add-restaurant-form" class="space-y-4">
+                    <h3 class="text-2xl font-bold font-serif mb-6">Add New Restaurant</h3>
+                    <div>
+                        <label class="block text-sm font-medium">Restaurant Name</label>
+                        <input type="text" name="name" class="input-field w-full" required>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium">Address</label>
+                        <textarea name="address" class="input-field w-full" rows="2" required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Owner's Username (Email)</label>
+                        <input type="email" name="username" class="input-field w-full" required>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium">Password</label>
+                        <input type="password" name="password" class="input-field w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Image Links</label>
+                        <textarea name="imageUrls" class="input-field w-full" rows="3" placeholder="Paste image URLs, one per line"></textarea>
+                        <div id="image-preview-container" class="mt-2 flex flex-wrap gap-2"></div>
+                    </div>
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Restaurant</button>
+                    </div>
+                </form>
+            `;
+            showModal(formHtml);
+
+            document.getElementById('add-restaurant-form').elements.imageUrls.addEventListener('input', (e) => {
+                const container = document.getElementById('image-preview-container');
+                container.innerHTML = '';
+                const urls = e.target.value.split('\n').filter(url => url.trim() !== '');
+                urls.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.className = 'w-20 h-20 object-cover rounded-md border';
+                    img.onerror = () => { img.src = 'https://placehold.co/80x80?text=Invalid'; };
+                    container.appendChild(img);
+                });
+            });
+
+            document.getElementById('add-restaurant-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const newRestaurantData = {
+                    name: form.elements.name.value,
+                    address: form.elements.address.value,
+                    email: form.elements.username.value,
+                    password: form.elements.password.value,
+                    imageUrls: form.elements.imageUrls.value.split('\n').filter(url => url.trim() !== '')
+                };
+
+                try {
+                    await processRestaurantCreation(newRestaurantData);
+                    closeModal();
+                    showSimpleModal(
+                        "Restaurant Creation Submitted!", 
+                        `The request to create an account for ${newRestaurantData.email} has been submitted and processed.`
+                    );
+                    renderAdminRestaurantsListView(document.getElementById('admin-main-content'));
+                } catch (err) {
+                    showSimpleModal("Error", `Could not submit creation request: ${err.message}`);
+                }
+            });
+        }
+
+        async function processRestaurantCreation(data) {
+            const tempAppName = `secondary-${Date.now()}`;
+            const tempApp = firebase.initializeApp(firebaseConfig, tempAppName);
+            const tempAuth = tempApp.auth();
+
+            try {
+                const userCredential = await tempAuth.createUserWithEmailAndPassword(data.email, data.password);
+                const ownerUid = userCredential.user.uid;
+                
+                const restaurantRef = await db.collection('restaurants').add({
+                    name: data.name,
+                    cuisine: "Default Cuisine",
+                    address: data.address,
+                    ownerId: ownerUid,
+                    isLocked: false,
+                    initialPassword: data.password,
+                    imageUrls: data.imageUrls,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                await db.collection('users').doc(ownerUid).set({
+                    name: data.name,
+                    email: data.email,
+                    role: 'restaurant',
+                    restaurantId: restaurantRef.id,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+            } catch (error) {
+                console.error("Error in simulated backend processing:", error);
+                throw error;
+            } finally {
+                await tempAuth.signOut();
+                await tempApp.delete();
+            }
+        }
+        
+        async function showAddDeliveryBoyForm() {
+            const formHtml = `
+                <form id="add-delivery-boy-form" class="space-y-4">
+                    <h3 class="text-2xl font-bold font-serif mb-6">Add New Delivery Boy</h3>
+                    <div>
+                        <label class="block text-sm font-medium">Full Name</label>
+                        <input type="text" name="name" class="input-field w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Email (Username)</label>
+                        <input type="email" name="email" class="input-field w-full" required>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium">Password</label>
+                        <input type="password" name="password" class="input-field w-full" required>
+                    </div>
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Account</button>
+                    </div>
+                </form>
+            `;
+            showModal(formHtml);
+
+            document.getElementById('add-delivery-boy-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const newUserData = {
+                    name: form.elements.name.value,
+                    email: form.elements.email.value,
+                    password: form.elements.password.value,
+                };
+
+                try {
+                    await processDeliveryBoyCreation(newUserData);
+                    closeModal();
+                    showSimpleModal(
+                        "Delivery Boy Created!", 
+                        `Account for ${newUserData.email} has been successfully created.`
+                    );
+                    renderDeliveryBoysView(document.getElementById('admin-main-content'));
+                } catch (err) {
+                    showSimpleModal("Error", `Could not create account: ${err.message}`);
+                }
+            });
+        }
+
+        async function processDeliveryBoyCreation(data) {
+            const tempAppName = `secondary-delivery-${Date.now()}`;
+            const tempApp = firebase.initializeApp(firebaseConfig, tempAppName);
+            const tempAuth = tempApp.auth();
+
+            try {
+                const userCredential = await tempAuth.createUserWithEmailAndPassword(data.email, data.password);
+                const userId = userCredential.user.uid;
+                
+                await db.collection('users').doc(userId).set({
+                    name: data.name,
+                    email: data.email,
+                    role: 'delivery',
+                    isOnline: false,
+                    isLocked: false,
+                    initialPassword: data.password,
+                    earnings: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+            } catch (error) {
+                console.error("Error in delivery boy creation processing:", error);
+                throw error;
+            } finally {
+                await tempAuth.signOut();
+                await tempApp.delete();
+            }
+        }
+
+        async function showEditRestaurantForm(restaurantId) {
+            const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
+            if (!restaurantDoc.exists) {
+                showSimpleModal("Error", "Restaurant not found!");
+                return;
+            }
+            const restaurant = restaurantDoc.data();
+
+            const formHtml = `
+                <form id="edit-restaurant-form" class="space-y-4">
+                    <h3 class="text-2xl font-bold font-serif mb-6">Edit Restaurant</h3>
+                    <input type="hidden" name="id" value="${restaurantId}">
+                    <div>
+                        <label class="block text-sm font-medium">Name</label>
+                        <input type="text" name="name" class="input-field w-full" value="${restaurant.name}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Cuisine</label>
+                        <input type="text" name="cuisine" class="input-field w-full" value="${restaurant.cuisine}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Address</label>
+                        <textarea name="address" class="input-field w-full" rows="3" required>${restaurant.address}</textarea>
+                    </div>
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            `;
+            showModal(formHtml);
+            document.getElementById('edit-restaurant-form').addEventListener('submit', handleUpdateRestaurant);
+        }
+
+        async function handleUpdateRestaurant(e) {
+            e.preventDefault();
+            const form = e.target;
+            const restaurantId = form.elements.id.value;
+            const updatedData = {
+                name: form.elements.name.value,
+                cuisine: form.elements.cuisine.value,
+                address: form.elements.address.value,
+            };
+            await db.collection('restaurants').doc(restaurantId).update(updatedData);
+            showSimpleModal("Success", "Restaurant updated successfully!");
+            closeModal();
+            renderAdminRestaurantDetailsView(restaurantId);
+        }
+
+        async function handleToggleLock(restaurantId) {
+            const restaurantRef = db.collection('restaurants').doc(restaurantId);
+            const doc = await restaurantRef.get();
+            const currentStatus = doc.data().isLocked || false;
+            await restaurantRef.update({ isLocked: !currentStatus });
+            renderAdminRestaurantDetailsView(restaurantId);
+        }
+
+        async function handleChangeRestaurantPassword(restaurantId) {
+            const newPassword = prompt("Enter the new temporary password for this restaurant:");
+            if (newPassword && newPassword.length >= 6) {
+                showConfirmationModal(
+                    'Confirm Password Change',
+                    `Set new password to "${newPassword}"? Note: This only updates the password display for the admin. A real app would require a backend function to securely change the user's actual password.`,
+                    async () => {
+                        await db.collection('restaurants').doc(restaurantId).update({
+                            initialPassword: newPassword
+                        });
+                        showSimpleModal("Success", "Temporary password display has been updated.");
+                        renderAdminRestaurantDetailsView(restaurantId);
+                    }
+                );
+            } else if (newPassword) {
+                showSimpleModal("Error", "Password must be at least 6 characters long.");
+            }
+        }
+        
+        async function renderAdminMenuManagementView(restaurantId) {
+            const contentArea = document.getElementById('admin-main-content');
+            const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
+            const restaurantName = restaurantDoc.data().name;
+
+            contentArea.innerHTML = `
+                 <div class="mb-6">
+                     <button data-action="back-to-restaurant-details" data-id="${restaurantId}" class="btn bg-white rounded-lg py-2 px-4 flex items-center gap-2 shadow-sm hover:shadow-md">
+                         <i data-feather="arrow-left" class="w-5 h-5"></i> Back to Details
+                     </button>
+                 </div>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold font-serif">Manage Menu: ${restaurantName}</h2>
+                    <button data-action="add-menu-item" data-id="${restaurantId}" class="btn btn-primary rounded-lg py-2 px-4 flex items-center gap-2">
+                        <i data-feather="plus" class="w-5 h-5"></i>Add Item
+                    </button>
+                </div>
+                <div id="admin-menu-list" class="space-y-3"></div>
+            `;
+            feather.replace();
+            const listEl = document.getElementById('admin-menu-list');
+            
+            const unsub = db.collection('restaurants').doc(restaurantId).collection('menu').onSnapshot(snapshot => {
+                 if (snapshot.empty) {
+                    listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">This menu is empty.</p>';
+                    return;
+                 }
+                 listEl.innerHTML = snapshot.docs.map(doc => renderMenuItemCard(doc, restaurantId)).join('');
+                 feather.replace();
+            });
+            unsubscribeListeners.push(unsub);
+        }
+
+        function renderMenuItemCard(doc, restaurantId) {
+            const item = doc.data();
+            const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
+            return `
+                <div class="flex items-center justify-between p-4 border rounded-lg bg-white">
+                    <img src="${itemImage}" class="w-20 h-20 object-cover rounded-md mr-4 hidden sm:block">
+                    <div class="flex-grow">
+                        <p class="font-semibold">${item.name}</p>
+                        <p class="text-sm text-gray-600">${item.description || 'No description.'}</p>
+                        <p class="font-bold mt-1">₹${item.price}</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <button data-action="edit-menu-item" data-id="${restaurantId}" data-item-id="${doc.id}" class="btn bg-gray-200 p-2 rounded-md"><i data-feather="edit-2" class="w-4 h-4"></i></button>
+                        <button data-action="delete-menu-item" data-id="${restaurantId}" data-item-id="${doc.id}" class="btn bg-red-100 text-red-600 p-2 rounded-md"><i data-feather="trash" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function showMenuItemForm(restaurantId, itemId = null) {
+            const isEditing = itemId !== null;
+            let item = { name: '', description: '', price: '', imageUrl: '' };
+            if (isEditing) {
+                const itemDoc = await db.collection('restaurants').doc(restaurantId).collection('menu').doc(itemId).get();
+                if (itemDoc.exists) item = itemDoc.data();
+            }
+
+            const formHtml = `
+                <form id="menu-item-form" class="space-y-4">
+                    <h3 class="text-2xl font-bold font-serif mb-6">${isEditing ? 'Edit Menu Item' : 'Add New Menu Item'}</h3>
+                    <input type="hidden" name="restaurantId" value="${restaurantId}">
+                    <input type="hidden" name="itemId" value="${itemId || ''}">
+                    <div>
+                        <label class="block text-sm font-medium">Item Name</label>
+                        <input type="text" name="name" class="input-field w-full" value="${item.name}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Description</label>
+                        <textarea name="description" class="input-field w-full" rows="3">${item.description}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Price (₹)</label>
+                        <input type="number" name="price" class="input-field w-full" value="${item.price}" required step="0.01">
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium">Image URL</label>
+                        <input type="url" name="imageUrl" class="input-field w-full" value="${item.imageUrl}">
+                        <img id="image-preview" src="${item.imageUrl || 'https://placehold.co/100x100?text=Preview'}" class="mt-2 w-24 h-24 object-cover rounded-md border" onerror="this.src='https://placehold.co/100x100?text=Invalid'"/>
+                    </div>
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Item</button>
+                    </div>
+                </form>
+            `;
+            showModal(formHtml);
+
+            document.getElementById('menu-item-form').elements.imageUrl.addEventListener('input', (e) => {
+                document.getElementById('image-preview').src = e.target.value || 'https://placehold.co/100x100?text=Preview';
+            });
+
+            document.getElementById('menu-item-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                const form = e.target;
+                const data = {
+                    name: form.elements.name.value,
+                    description: form.elements.description.value,
+                    price: parseFloat(form.elements.price.value),
+                    imageUrl: form.elements.imageUrl.value,
+                };
+
+                const restId = form.elements.restaurantId.value;
+                const itmId = form.elements.itemId.value;
+
+                if (itmId) { // Editing
+                    await db.collection('restaurants').doc(restId).collection('menu').doc(itmId).update(data);
+                } else { // Adding
+                    await db.collection('restaurants').doc(restId).collection('menu').add(data);
+                }
+                closeModal();
+            });
+        }
+
+        function handleDeleteMenuItem(restaurantId, itemId) {
+            showConfirmationModal(
+                "Delete Item?",
+                "Are you sure you want to permanently delete this menu item? This cannot be undone.",
+                async () => {
+                    await db.collection('restaurants').doc(restaurantId).collection('menu').doc(itemId).delete();
+                }
+            );
+        }
+
+        async function renderAdminOrdersView(contentArea) {
+             contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">All Orders</h2><p>Loading orders...</p>`;
+             const ordersSnapshot = await db.collection('orders').get();
+             const sortedDocs = ordersSnapshot.docs.sort((a, b) => b.data().createdAt.seconds - a.data().createdAt.seconds);
+             let tableHtml = `<div class="bg-white p-4 rounded-xl shadow-md overflow-x-auto">
+                 <table class="w-full text-sm text-left">
+                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                         <tr>
+                             <th class="px-6 py-3">Order ID</th>
+                             <th class="px-6 py-3">Customer</th>
+                             <th class="px-6 py-3">Restaurant</th>
+                             <th class="px-6 py-3">Total</th>
+                             <th class="px-6 py-3">Status</th>
+                             <th class="px-6 py-3">Action</th>
+                         </tr>
+                     </thead><tbody>`;
+             sortedDocs.forEach(doc => {
+                 const order = doc.data();
+                 tableHtml += `<tr class="border-b">
+                     <td class="px-6 py-4 font-medium">#${doc.id.substring(0,6)}</td>
+                     <td class="px-6 py-4">${order.customerName}</td>
+                     <td class="px-6 py-4">${order.restaurantName}</td>
+                     <td class="px-6 py-4">₹${order.totalPrice.toFixed(2)}</td>
+                     <td class="px-6 py-4 capitalize">${order.status}</td>
+                     <td class="px-6 py-4">
+                        <button data-action="view-bill" data-order-id="${doc.id}" class="btn btn-secondary text-xs py-1 px-2">View Bill</button>
+                     </td>
+                 </tr>`;
+             });
+             tableHtml += `</tbody></table></div>`;
+             contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">All Orders</h2>` + tableHtml;
+             feather.replace();
+        }
+
+        async function renderAdminUsersView(contentArea) {
+             contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">All Users</h2><p>Loading users...</p>`;
+             const usersSnapshot = await db.collection('users').get();
+             let tableHtml = `<div class="bg-white p-4 rounded-xl shadow-md overflow-x-auto">
+                 <table class="w-full text-sm text-left">
+                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                         <tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Email</th><th class="px-6 py-3">Mobile</th><th class="px-6 py-3">Role</th></tr>
+                     </thead><tbody>`;
+             usersSnapshot.forEach(doc => {
+                 const user = doc.data();
+                 tableHtml += `<tr class="border-b"><td class="px-6 py-4 font-medium">${user.name}</td><td class="px-6 py-4">${user.email}</td><td class="px-6 py-4">${user.mobile || 'N/A'}</td><td class="px-6 py-4 capitalize">${user.role}</td></tr>`;
+             });
+             tableHtml += `</tbody></table></div>`;
+             contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">All Users</h2>` + tableHtml;
+        }
+
+        async function renderDeliveryBoysView(contentArea) {
+             contentArea.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold font-serif">Delivery Staff</h2>
+                    <button data-action="add-delivery-boy" class="btn btn-primary rounded-lg py-2 px-4 flex items-center gap-2">
+                        <i data-feather="plus" class="w-5 h-5"></i>Add Delivery Boy
+                    </button>
+                </div>
+                <div id="delivery-boys-list-container"></div>
+             `;
+             feather.replace();
+             const listEl = document.getElementById('delivery-boys-list-container');
+
+             db.collection('users').where('role', '==', 'delivery').onSnapshot(snapshot => {
+                 if (snapshot.empty) {
+                     listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">No delivery boys found.</p>';
+                     return;
+                 }
+                 let tableHtml = `<div class="bg-white p-4 rounded-xl shadow-md overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                         <tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Email</th><th class="px-6 py-3">Mobile</th><th class="px-6 py-3">Status</th></tr>
+                     </thead><tbody>`;
+                 snapshot.forEach(doc => {
+                     const boy = doc.data();
+                     tableHtml += `<tr class="border-b hover:bg-gray-50 cursor-pointer delivery-boy-row" data-id="${doc.id}">
+                        <td class="px-6 py-4 font-medium">${boy.name}</td>
+                        <td class="px-6 py-4">${boy.email}</td>
+                        <td class="px-6 py-4">${boy.mobile || 'N/A'}</td>
+                        <td class="px-6 py-4 capitalize ${boy.isOnline ? 'text-green-600 font-semibold' : ''}">${boy.isOnline ? 'Online' : 'Offline'}</td>
+                    </tr>`;
+                 });
+                 tableHtml += `</tbody></table></div>`;
+                 listEl.innerHTML = tableHtml;
+             });
+        }
+        
+        async function renderDeliveryBoyDetailsView(userId) {
+            const contentArea = document.getElementById('admin-main-content');
+            contentArea.innerHTML = `<p>Loading details...</p>`;
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (!userDoc.exists) {
+                contentArea.innerHTML = `<p>Delivery boy not found.</p>`;
+                return;
+            }
+            const user = { id: userDoc.id, ...userDoc.data() };
+
+            const lockButtonText = user.isLocked ? 'Unlock Account' : 'Lock Account';
+            const lockButtonClass = user.isLocked ? 'btn-primary' : 'btn-danger';
+
+            contentArea.innerHTML = `
+                 <div class="mb-6">
+                     <button data-action="back-to-delivery-boys" class="btn bg-white rounded-lg py-2 px-4 flex items-center gap-2 shadow-sm hover:shadow-md">
+                         <i data-feather="arrow-left" class="w-5 h-5"></i> Back to Delivery Staff
+                     </button>
+                 </div>
+                 <div class="bg-white p-6 rounded-xl shadow-md">
+                     <div class="flex justify-between items-start">
+                         <div>
+                             <h2 class="text-3xl font-bold font-serif">${user.name}</h2>
+                             <p class="text-gray-600 mt-1">${user.email}</p>
+                         </div>
+                         <div class="flex gap-2 flex-wrap">
+                            <button data-action="remove-delivery-boy" data-id="${user.id}" class="btn btn-danger">Remove</button>
+                         </div>
+                     </div>
+                     <div class="mt-6 border-t pt-4 space-y-2">
+                         <p><strong>Mobile:</strong> ${user.mobile || 'N/A'}</p>
+                         <p><strong>User ID:</strong> ${user.id}</p>
+                         <div class="bg-gray-100 p-4 rounded-lg mt-4">
+                             <h4 class="font-semibold">Credentials</h4>
+                             <p><strong>Password:</strong> <span class="text-red-500 font-mono">${user.initialPassword || 'Set by user'}</span></p>
+                             <button data-action="change-delivery-boy-password" data-id="${user.id}" class="btn btn-secondary text-sm mt-2 py-1 px-3">Change Password</button>
+                         </div>
+                          <div class="bg-yellow-100 p-4 rounded-lg mt-4">
+                             <h4 class="font-semibold">Account Status</h4>
+                             <p>This account is currently <strong>${user.isLocked ? 'Locked' : 'Active'}</strong>.</p>
+                             <button data-action="toggle-delivery-boy-lock" data-id="${user.id}" class="btn ${lockButtonClass} text-sm mt-2 py-1 px-3">${lockButtonText}</button>
+                         </div>
+                     </div>
+                 </div>
+            `;
+            feather.replace();
+        }
+
+        async function handleChangeDeliveryBoyPassword(userId) {
+            const newPassword = prompt("Enter the new temporary password for this user:");
+            if (newPassword && newPassword.length >= 6) {
+                showConfirmationModal(
+                    'Confirm Password Change',
+                    `Set new password to "${newPassword}"? This only updates the password display for the admin.`,
+                    async () => {
+                        await db.collection('users').doc(userId).update({
+                            initialPassword: newPassword
+                        });
+                        showSimpleModal("Success", "Temporary password display has been updated.");
+                        renderDeliveryBoyDetailsView(userId);
+                    }
+                );
+            } else if (newPassword) {
+                showSimpleModal("Error", "Password must be at least 6 characters long.");
+            }
+        }
+
+        async function handleToggleDeliveryBoyLock(userId) {
+            const userRef = db.collection('users').doc(userId);
+            const doc = await userRef.get();
+            const currentStatus = doc.data().isLocked || false;
+            await userRef.update({ isLocked: !currentStatus });
+            renderDeliveryBoyDetailsView(userId);
+        }
+
+        async function handleRemoveDeliveryBoy(userId) {
+            showConfirmationModal(
+                "Remove Delivery Boy?",
+                "This will delete their profile data. This action cannot be undone. Note: This does not delete their authentication record for security reasons.",
+                async () => {
+                    await db.collection('users').doc(userId).delete();
+                    showSimpleModal("Success", "Delivery boy profile has been removed.");
+                    renderAdminView('delivery-boys');
+                }
+            );
+        }
+
+        // --- SUPER ADMIN PORTAL ---
+        function initializeSuperAdminPortal() {
+            activePortalHandler = handleSuperAdminClicks;
+            mainContent.addEventListener('click', activePortalHandler);
+            renderSuperAdminView('dashboard');
+        }
+
+        function handleSuperAdminClicks(e) {
+            const sidebarLink = e.target.closest('.sidebar-link');
+            if (sidebarLink) {
+                renderSuperAdminView(sidebarLink.dataset.view);
+                return;
+            }
+            if(document.getElementById('admin-main-content')) {
+                handleAdminClicks(e);
+            }
+        }
+
+        function renderSuperAdminView(viewName) {
+            const nav = document.getElementById('superadmin-nav');
+             if (nav) {
+                 nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+                 const activeLink = nav.querySelector(`[data-view="${viewName}"]`);
+                 if (activeLink) activeLink.classList.add('active');
+            }
+            const contentArea = document.getElementById('superadmin-main-content');
+            
+            switch(viewName) {
+                case 'dashboard': renderAdminDashboardView(contentArea); break;
+                case 'admin-panel':
+                    const adminTemplate = document.getElementById('admin-portal-template');
+                    contentArea.innerHTML = '';
+                    contentArea.appendChild(adminTemplate.content.cloneNode(true));
+                    feather.replace();
+                    renderAdminView('restaurants', 'admin-main-content');
+                    break;
+                case 'website-settings': renderWebsiteSettingsView(contentArea); break;
+                case 'user-roles': renderUserRolesView(contentArea); break;
+                case 'maintenance-mode': renderMaintenanceModeView(contentArea); break;
+            }
+        }
+
+        async function renderWebsiteSettingsView(contentArea) {
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Website Settings</h2>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <form id="website-settings-form" class="space-y-4">
+                        <div>
+                            <label for="website-name" class="block text-sm font-medium text-gray-700">Website Name</label>
+                            <input type="text" id="website-name" name="websiteName" class="input-field mt-1 block w-full" value="${siteSettings.websiteName || ''}">
+                        </div>
+                        <div>
+                            <label for="website-logo" class="block text-sm font-medium text-gray-700">Logo URL</label>
+                            <input type="url" id="website-logo" name="logoUrl" class="input-field mt-1 block w-full" value="${siteSettings.logoUrl || ''}">
+                        </div>
+                         <div>
+                            <label for="primary-color" class="block text-sm font-medium text-gray-700">Primary Color</label>
+                            <input type="color" id="primary-color" name="primaryColor" class="input-field mt-1 block w-full" value="${siteSettings.primaryColor || '#1a202c'}">
+                        </div>
+                        <div>
+                            <label for="secondary-color" class="block text-sm font-medium text-gray-700">Secondary Color</label>
+                            <input type="color" id="secondary-color" name="secondaryColor" class="input-field mt-1 block w-full" value="${siteSettings.secondaryColor || '#D4AF37'}">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full py-3 rounded-lg">Save Settings</button>
+                    </form>
+                </div>
+            `;
+            document.getElementById('website-settings-form').addEventListener('submit', handleUpdateWebsiteSettings);
+        }
+        
+        async function handleUpdateWebsiteSettings(e) {
+            e.preventDefault();
+            const form = e.target;
+            const updatedSettings = {
+                websiteName: form.elements.websiteName.value,
+                logoUrl: form.elements.logoUrl.value,
+                primaryColor: form.elements.primaryColor.value,
+                secondaryColor: form.elements.secondaryColor.value,
+            };
+            await db.collection('settings').doc('config').set(updatedSettings, { merge: true });
+            siteSettings = {...siteSettings, ...updatedSettings};
+            applySiteSettings();
+            showSimpleModal('Success', 'Settings updated successfully!');
+        }
+
+        async function renderUserRolesView(contentArea) {
+            contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">User Role Management</h2><div id="user-roles-list">Loading...</div>`;
+            const listEl = document.getElementById('user-roles-list');
+            
+            db.collection('users').onSnapshot(snapshot => {
+                const tableHtml = `
+                    <div class="bg-white p-4 rounded-xl shadow-md overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">Name</th><th class="px-6 py-3">Email</th><th class="px-6 py-3">Current Role</th><th class="px-6 py-3">Change Role</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${snapshot.docs.map(doc => {
+                                    const user = {id: doc.id, ...doc.data()};
+                                    const isDisabled = user.id === currentUser.uid; 
+                                    return `
+                                        <tr class="border-b">
+                                            <td class="px-6 py-4">${user.name}</td>
+                                            <td class="px-6 py-4">${user.email}</td>
+                                            <td class="px-6 py-4 capitalize">${user.role}</td>
+                                            <td class="px-6 py-4">
+                                                <select data-userid="${user.id}" class="role-select input-field rounded-lg" ${isDisabled ? 'disabled' : ''}>
+                                                    <option value="customer" ${user.role === 'customer' ? 'selected' : ''}>Customer</option>
+                                                    <option value="restaurant" ${user.role === 'restaurant' ? 'selected' : ''}>Restaurant</option>
+                                                    <option value="delivery" ${user.role === 'delivery' ? 'selected' : ''}>Delivery</option>
+                                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                                    <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                listEl.innerHTML = tableHtml;
+                
+                listEl.querySelectorAll('.role-select').forEach(select => {
+                    select.addEventListener('change', async (e) => {
+                        const selectEl = e.target;
+                        const newRole = selectEl.value;
+                        const userId = selectEl.dataset.userid;
+                        const userDoc = await db.collection('users').doc(userId).get();
+                        const originalRole = userDoc.data().role;
+
+                        showConfirmationModal(
+                            `Change Role?`,
+                            `Are you sure you want to change this user's role to ${newRole}?`,
+                            async () => {
+                                await db.collection('users').doc(userId).update({ role: newRole });
+                                showSimpleModal('Success', 'Role updated successfully.');
+                            },
+                            () => {
+                                selectEl.value = originalRole;
+                            }
+                        );
+                    });
+                });
+            });
+        }
+
+        async function renderMaintenanceModeView(contentArea) {
+            const isEnabled = siteSettings.maintenanceMode || false;
+            contentArea.innerHTML = `
+                <h2 class="text-3xl font-bold font-serif mb-6">Maintenance Mode</h2>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <form id="maintenance-mode-form">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold">Site Maintenance</p>
+                                <p class="text-sm text-gray-600">Enabling this will make the site inaccessible to all users except superadmins.</p>
+                            </div>
+                            <button type="submit" class="btn ${isEnabled ? 'btn-danger' : 'btn-secondary'} w-48">
+                                ${isEnabled ? 'Disable Maintenance' : 'Enable Maintenance'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            document.getElementById('maintenance-mode-form').addEventListener('submit', handleToggleMaintenanceMode);
+        }
+        
+        async function handleToggleMaintenanceMode(e) {
+            e.preventDefault();
+            const newStatus = !siteSettings.maintenanceMode;
+            await db.collection('settings').doc('config').update({ maintenanceMode: newStatus });
+            siteSettings.maintenanceMode = newStatus;
+            showSimpleModal(
+                `Maintenance Mode ${newStatus ? 'Enabled' : 'Disabled'}`,
+                'The page will now reload to apply the changes.',
+                () => { window.location.reload(); }
+            );
+        }
+
+        // --- UTILITY & BILLING FUNCTIONS ---
+        async function renderOrderBill(orderId) {
+            const orderDoc = await db.collection('orders').doc(orderId).get();
+            if (!orderDoc.exists) {
+                showSimpleModal("Error", "Order not found.");
+                return;
+            }
+            const order = orderDoc.data();
+            const restaurantDoc = await db.collection('restaurants').doc(order.restaurantId).get();
+            const restaurant = restaurantDoc.data();
+
+            const billHtml = `
+                <div id="printable-bill">
+                    <div class="p-6">
+                        <h3 class="text-2xl font-bold font-serif text-center mb-2">Tax Invoice</h3>
+                        <div class="text-center mb-6">
+                            <h4 class="text-xl font-bold">${order.restaurantName}</h4>
+                            <p class="text-sm text-gray-600">${restaurant.address}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm mb-6 border-y py-4">
+                            <div>
+                                <p class="font-bold">Billed To:</p>
+                                <p>${order.customerName}</p>
+                                <p>${order.deliveryAddress}</p>
+                            </div>
+                            <div class="text-right">
+                                <p><strong>Invoice #:</strong> ${orderId.substring(0, 8).toUpperCase()}</p>
+                                <p><strong>Date:</strong> ${new Date(order.createdAt.seconds * 1000).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                        <table class="w-full text-sm mb-6">
+                            <thead class="border-b">
+                                <tr>
+                                    <th class="text-left py-2">Item</th>
+                                    <th class="text-center py-2">Qty</th>
+                                    <th class="text-right py-2">Price</th>
+                                    <th class="text-right py-2">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${order.items.map(item => `
+                                    <tr class="border-b">
+                                        <td class="py-2">${item.name}</td>
+                                        <td class="text-center py-2">${item.quantity}</td>
+                                        <td class="text-right py-2">₹${item.price.toFixed(2)}</td>
+                                        <td class="text-right py-2">₹${(item.price * item.quantity).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-right font-bold py-2">Subtotal</td>
+                                    <td class="text-right font-bold py-2">₹${order.subtotal.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-right font-bold py-2 text-xl">Grand Total</td>
+                                    <td class="text-right font-bold py-2 text-xl">₹${order.totalPrice.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p class="text-center text-xs text-gray-500">Thank you for your order!</p>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-4 mt-4 no-print">
+                    <button class="btn bg-gray-200" onclick="closeModal()">Close</button>
+                    <button class="btn btn-primary" onclick="window.print()">Print Bill</button>
+                </div>
+            `;
+            showModal(billHtml);
+        }
+
+        function showModal(contentHtml) {
+            modalContainer.innerHTML = `<div class="modal-content">${contentHtml}</div>`;
+            modalContainer.classList.add('active');
+            feather.replace();
+        }
+
+        function showSimpleModal(title, message, onOk) {
+            const modalHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold font-serif mb-2">${title}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button id="simple-modal-ok" class="btn btn-primary rounded-lg py-2 px-12">OK</button>
+                </div>
+            `;
+            showModal(modalHtml);
+            document.getElementById('simple-modal-ok').addEventListener('click', () => {
+                if (onOk) onOk();
+                closeModal();
+            });
+        }
+
+        function showConfirmationModal(title, message, onConfirm, onCancel) {
+            const modalHtml = `
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold font-serif mb-2">${title}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <div class="flex justify-center gap-4">
+                        <button id="confirm-cancel" class="btn bg-gray-200 rounded-lg py-2 px-8">Cancel</button>
+                        <button id="confirm-ok" class="btn btn-danger rounded-lg py-2 px-8">Confirm</button>
+                    </div>
+                </div>
+            `;
+            showModal(modalHtml);
+
+            document.getElementById('confirm-ok').addEventListener('click', () => {
+                if (onConfirm) onConfirm();
+                closeModal();
+            });
+            document.getElementById('confirm-cancel').addEventListener('click', () => {
+                if (onCancel) onCancel();
+                closeModal();
+            });
+        }
+
+        function closeModal() {
+            modalContainer.classList.remove('active');
+            modalContainer.innerHTML = '';
+        }
+
+        function cleanupListeners() {
+            unsubscribeListeners.forEach(unsub => unsub());
+            unsubscribeListeners = [];
+        }
+
+        // --- INITIALIZE APP ON LOAD ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+        
+        logoutBtn.addEventListener('click', () => auth.signOut());
+        feather.replace();
+
+    </script>
+</body>
+</html>
