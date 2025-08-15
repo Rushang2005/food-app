@@ -303,7 +303,7 @@ function showView(view) {
         header.style.display = 'flex';
         appContainer.classList.add('fade-in');
     } else { 
-        appContainer.style.display = 'block';
+        appContainer.style.display = 'none'; // <-- This is the fix
         header.style.display = 'none';
         authContainer.style.display = 'flex';
         renderAuthForm('login');
