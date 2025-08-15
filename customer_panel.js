@@ -13,6 +13,129 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// --- TRANSLATIONS ---
+const translations = {
+    en: {
+        maintenanceTitle: "Under Maintenance",
+        maintenanceText: "We are currently performing maintenance. Please check back later.",
+        logout: "Logout",
+        language: "Language",
+        aiAssistant: "UniFood AI Assistant",
+        aiGreeting: "Hello! How can I help you today?",
+        askAnythingPlaceholder: "Ask me anything...",
+        welcomeBack: "Welcome Back",
+        signInPrompt: "Sign in to get your food.",
+        emailLabel: "Email",
+        passwordLabel: "Password",
+        login: "Login",
+        dontHaveAccount: "Don't have an account?",
+        signUp: "Sign Up",
+        createAccount: "Create Account",
+        signUpPrompt: "Join us for a delicious journey.",
+        fullNamePlaceholder: "Full Name",
+        mobileNumberPlaceholder: "Mobile Number",
+        emailPlaceholder: "Email Address",
+        passwordPlaceholder: "Password (min. 6 characters)",
+        alreadyHaveAccount: "Already have an account?",
+        menu: "Menu",
+        home: "Home",
+        myOrders: "My Orders",
+        profile: "Profile",
+        findYourNextMeal: "Find Your Next Meal",
+        heroSubtitle: "The best restaurants, delivered to your doorstep.",
+        searchPlaceholder: "Search for restaurants or cuisines...",
+        justForYou: "Just For You ✨",
+        aiRecommendationsPlaceholder: "AI recommendations will appear here based on your order history.",
+        backToRestaurants: "Back to Restaurants",
+        addToCart: "Add to Cart",
+        myProfile: "My Profile",
+        updateProfile: "Update Profile",
+        yourOrder: "Your Order",
+        placeOrder: "Place Order",
+        close: "Close",
+    },
+    gu: {
+        maintenanceTitle: "જાળવણી હેઠળ",
+        maintenanceText: "અમે હાલમાં જાળવણી કરી રહ્યા છીએ. કૃપા કરીને પછીથી ફરી તપાસ કરો.",
+        logout: "લૉગઆઉટ",
+        language: "ભાષા",
+        aiAssistant: "યુનિફૂડ AI સહાયક",
+        aiGreeting: "નમસ્તે! આજે હું તમારી શી રીતે મદદ કરી શકું?",
+        askAnythingPlaceholder: "મને કંઈપણ પૂછો...",
+        welcomeBack: "ફરી સ્વાગત છે",
+        signInPrompt: "તમારું ભોજન મેળવવા માટે સાઇન ઇન કરો.",
+        emailLabel: "ઈમેલ",
+        passwordLabel: "પાસવર્ડ",
+        login: "લૉગિન",
+        dontHaveAccount: "ખાતું નથી?",
+        signUp: "સાઇન અપ કરો",
+        createAccount: "એકાઉન્ટ બનાવો",
+        signUpPrompt: "એક સ્વાદિષ્ટ પ્રવાસ માટે અમારી સાથે જોડાઓ.",
+        fullNamePlaceholder: "પૂરું નામ",
+        mobileNumberPlaceholder: "મોબાઇલ નંબર",
+        emailPlaceholder: "ઈમેલ સરનામું",
+        passwordPlaceholder: "પાસવર્ડ (ઓછામાં ઓછા 6 અક્ષરો)",
+        alreadyHaveAccount: "પહેલેથી એકાઉન્ટ છે?",
+        menu: "મેનુ",
+        home: "હોમ",
+        myOrders: "મારા ઓર્ડર્સ",
+        profile: "પ્રોફાઇલ",
+        findYourNextMeal: "તમારું આગલું ભોજન શોધો",
+        heroSubtitle: "શ્રેષ્ઠ રેસ્ટોરન્ટ્સ, તમારા ઘર સુધી પહોંચાડવામાં આવે છે.",
+        searchPlaceholder: "રેસ્ટોરન્ટ્સ અથવા વાનગીઓ શોધો...",
+        justForYou: "ફક્ત તમારા માટે ✨",
+        aiRecommendationsPlaceholder: "તમારા ઓર્ડર ઇતિહાસના આધારે AI ભલામણો અહીં દેખાશે.",
+        backToRestaurants: "રેસ્ટોરન્ટ્સ પર પાછા જાઓ",
+        addToCart: "કાર્ટમાં ઉમેરો",
+        myProfile: "મારી પ્રોફાઇલ",
+        updateProfile: "પ્રોફાઇલ અપડેટ કરો",
+        yourOrder: "તમારો ઓર્ડર",
+        placeOrder: "ઓર્ડર આપો",
+        close: "બંધ કરો",
+    },
+    hi: {
+        maintenanceTitle: "रखरखाव હેઠળ",
+        maintenanceText: "हम वर्तमान में रखरखाव का काम कर रहे हैं। कृपया बाद में वापस देखें।",
+        logout: "लॉग आउट",
+        language: "भाषा",
+        aiAssistant: "यूनिफूड एआई सहायक",
+        aiGreeting: "नमस्ते! आज मैं आपकी कैसे मदद कर सकता हूँ?",
+        askAnythingPlaceholder: "मुझसे कुछ भी पूछें...",
+        welcomeBack: "वापसी पर स्वागत है",
+        signInPrompt: "अपना भोजन पाने के लिए साइन इन करें।",
+        emailLabel: "ईमेल",
+        passwordLabel: "पासवर्ड",
+        login: "लॉग इन करें",
+        dontHaveAccount: "खाता नहीं है?",
+        signUp: "साइन अप करें",
+        createAccount: "खाता बनाएं",
+        signUpPrompt: "एक स्वादिष्ट यात्रा के लिए हमसे जुड़ें।",
+        fullNamePlaceholder: "पूरा नाम",
+        mobileNumberPlaceholder: "मोबाइल नंबर",
+        emailPlaceholder: "ईमेल पता",
+        passwordPlaceholder: "पासवर्ड (न्यूनतम 6 अक्षर)",
+        alreadyHaveAccount: "पहले से ही एक खाता है?",
+        menu: "मेन्यू",
+        home: "होम",
+        myOrders: "मेरे आर्डर",
+        profile: "प्रोफ़ाइल",
+        findYourNextMeal: "अपना अगला भोजन खोजें",
+        heroSubtitle: "सर्वश्रेष्ठ रेस्तरां, आपके दरवाजे पर पहुंचाए जाते हैं।",
+        searchPlaceholder: "रेस्तरां या व्यंजन खोजें...",
+        justForYou: "सिर्फ आपके लिए ✨",
+        aiRecommendationsPlaceholder: "आपके ऑर्डर इतिहास के आधार पर एआई सिफारिशें यहां दिखाई देंगी।",
+        backToRestaurants: "रेस्तरां पर वापस जाएं",
+        addToCart: "कार्ट में जोड़ें",
+        myProfile: "मेरी प्रोफाइल",
+        updateProfile: "प्रोफ़ाइल अपडेट करें",
+        yourOrder: "आपका ऑर्डर",
+        placeOrder: "ऑर्डर दें",
+        close: "बंद करें",
+    }
+};
+let currentLanguage = 'en';
+
+
 // --- GLOBAL STATE & EVENT HANDLERS ---
 let currentUser = null;
 let unsubscribeListeners = [];
@@ -44,26 +167,54 @@ const mobileUserInfo = document.getElementById('mobile-user-info');
 const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 
 
-// --- CORE APP & AUTH LOGIC ---
+// --- LANGUAGE & UI TEXT FUNCTIONS ---
+function updateUIText() {
+    document.querySelectorAll('[data-translate-key]').forEach(el => {
+        const key = el.dataset.translateKey;
+        const translation = translations[currentLanguage]?.[key] || translations['en'][key];
+        if (translation) {
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                el.placeholder = translation;
+            } else {
+                el.textContent = translation;
+            }
+        }
+    });
+    feather.replace(); 
+}
 
+function setLanguage(lang) {
+    if (translations[lang]) {
+        currentLanguage = lang;
+        localStorage.setItem('unifood-lang', lang);
+        document.getElementById('language-switcher').value = lang;
+        document.getElementById('mobile-language-switcher').value = lang;
+        updateUIText();
+    }
+}
+
+
+// --- CORE APP & AUTH LOGIC ---
 async function initializeApp() {
-    // Fetch site settings first
     const settingsDoc = await db.collection('settings').doc('config').get();
     if (settingsDoc.exists) {
         siteSettings = settingsDoc.data();
-    } else { // Set default charges if not present
+    } else { 
         siteSettings = {
-            deliveryCharge: 40,
-            deliveryChargeType: 'fixed', // 'fixed' or 'percentage'
-            gstRate: 5, // percentage
-            platformFee: 0,
-            platformFeeType: 'fixed'
+            deliveryCharge: 40, deliveryChargeType: 'fixed', gstRate: 5,
+            platformFee: 0, platformFeeType: 'fixed'
         };
         await db.collection('settings').doc('config').set(siteSettings);
     }
     applySiteSettings();
 
-    // Listen for auth changes
+    // Language setup
+    const savedLang = localStorage.getItem('unifood-lang') || 'en';
+    setLanguage(savedLang);
+
+    document.getElementById('language-switcher').addEventListener('change', (e) => setLanguage(e.target.value));
+    document.getElementById('mobile-language-switcher').addEventListener('change', (e) => setLanguage(e.target.value));
+
     auth.onAuthStateChanged(async (user) => {
         cleanupListeners();
         if (activePortalHandler) {
@@ -82,20 +233,13 @@ async function initializeApp() {
                     if(auth.currentUser) auth.signOut();
                     return;
                 }
-
-                if (currentUser.role === 'restaurant') {
-                    const restaurantDoc = await db.collection('restaurants').doc(currentUser.restaurantId).get();
-                    if (restaurantDoc.exists && restaurantDoc.data().isLocked) {
-                        showSimpleModal("Account Locked", "Your restaurant account is currently locked. Please contact support.");
-                        auth.signOut();
-                        return;
-                    }
+                
+                if (currentUser.role === 'restaurant' && (await db.collection('restaurants').doc(currentUser.restaurantId).get()).data().isLocked) {
+                    showSimpleModal("Account Locked", "Your restaurant account is currently locked. Please contact support."); auth.signOut(); return;
                 }
 
                 if (currentUser.role === 'delivery' && currentUser.isLocked) {
-                     showSimpleModal("Account Locked", "Your delivery account is currently locked. Please contact support.");
-                     auth.signOut();
-                     return;
+                     showSimpleModal("Account Locked", "Your delivery account is currently locked. Please contact support."); auth.signOut(); return;
                 }
                 
                 const userHtml = `<p class="font-semibold">${currentUser.name}</p><p class="text-xs text-gray-500 capitalize">${currentUser.role}</p>`;
@@ -117,23 +261,17 @@ async function initializeApp() {
                 showView('auth');
             }
         }
+        updateUIText();
     });
 }
 
 function logAudit(action, details) {
     if (!currentUser) return;
-    try {
-        db.collection('auditLog').add({
-            action: action,
-            details: details,
-            performedBy: currentUser.name,
-            role: currentUser.role,
-            userId: currentUser.uid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    } catch (error) {
-        console.error("Failed to write audit log:", error);
-    }
+    db.collection('auditLog').add({
+        action: action, details: details, performedBy: currentUser.name,
+        role: currentUser.role, userId: currentUser.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(error => console.error("Failed to write audit log:", error));
 }
 
 function applySiteSettings() {
@@ -141,28 +279,16 @@ function applySiteSettings() {
         websiteNameHeader.textContent = siteSettings.websiteName;
         document.title = siteSettings.websiteName;
     }
-    if (siteSettings.logoUrl) {
-        websiteLogoHeader.src = siteSettings.logoUrl;
-    }
-    if (siteSettings.primaryColor) {
-        document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
-    }
-    if (siteSettings.secondaryColor) {
-        document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
-    }
-    if (siteSettings.heroBgImage) {
-         authContainer.style.backgroundImage = `url('${siteSettings.heroBgImage}')`;
-    }
-    // Display active announcement
-    announcementContainer.innerHTML = ''; // Clear previous
+    if (siteSettings.logoUrl) websiteLogoHeader.src = siteSettings.logoUrl;
+    if (siteSettings.primaryColor) document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
+    if (siteSettings.secondaryColor) document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
+    if (siteSettings.heroBgImage) authContainer.style.backgroundImage = `url('${siteSettings.heroBgImage}')`;
+    
+    announcementContainer.innerHTML = ''; 
     db.collection('announcements').where('isActive', '==', true).limit(1).get().then(snapshot => {
         if (!snapshot.empty) {
             const announcement = snapshot.docs[0].data();
-            announcementContainer.innerHTML = `
-                <div class="bg-yellow-200 text-yellow-800 p-3 text-center text-sm">
-                    <strong>${announcement.title || 'Announcement'}:</strong> ${announcement.text}
-                </div>
-            `;
+            announcementContainer.innerHTML = `<div class="bg-yellow-200 text-yellow-800 p-3 text-center text-sm"><strong>${announcement.title || 'Announcement'}:</strong> ${announcement.text}</div>`;
         }
     });
 }
@@ -191,24 +317,15 @@ function loadPortal(user) {
         mainContent.removeEventListener('click', activePortalHandler);
         activePortalHandler = null;
     }
-
-    const role = user.role;
-    const template = document.getElementById(`${role}-portal-template`);
-
+    const template = document.getElementById(`${user.role}-portal-template`);
     if (template) {
         mainContent.appendChild(template.content.cloneNode(true));
         feather.replace();
-
-        switch (role) {
-            case 'admin': initializeAdminPortal(); break;
-            case 'superadmin': initializeSuperAdminPortal(); break;
-            case 'restaurant': initializeRestaurantPortal(); break;
-            case 'delivery': initializeDeliveryPortal(); break;
-            case 'customer': initializeCustomerPortal(); break;
-        }
+        if (user.role === 'customer') initializeCustomerPortal();
     } else {
-        mainContent.innerHTML = `<p class="text-center text-red-500">Error: Portal template for role "${role}" not found.</p>`;
+        mainContent.innerHTML = `<p class="text-center text-red-500">Error: Portal template for role "${user.role}" not found.</p>`;
     }
+    updateUIText();
 }
 
 function renderAuthForm(formType) {
@@ -218,6 +335,7 @@ function renderAuthForm(formType) {
     if (template) {
         authCard.appendChild(template.content.cloneNode(true));
     }
+    updateUIText();
 
     if (formType === 'login') {
         document.getElementById('login-form').addEventListener('submit', handleLogin);
@@ -260,10 +378,12 @@ function initializeCustomerPortal() {
     activePortalHandler = handleCustomerClicks;
     mainContent.addEventListener('click', activePortalHandler);
     
-    // Also listen for clicks on the mobile nav
-    const mobileNav = document.getElementById('mobile-customer-nav');
-    if(mobileNav) {
-        mobileNav.addEventListener('click', handleCustomerClicks);
+    // Populate mobile nav and add listener
+    const desktopNav = document.getElementById('customer-nav');
+    const mobileNavContainer = document.getElementById('mobile-nav-links');
+    if (desktopNav && mobileNavContainer) {
+        mobileNavContainer.innerHTML = desktopNav.innerHTML;
+        mobileNavContainer.addEventListener('click', handleCustomerClicks);
     }
     
     modalContainer.addEventListener('click', (e) => {
@@ -280,6 +400,9 @@ function handleCustomerClicks(e) {
     const navLink = e.target.closest('[data-view]');
     if (navLink) {
         renderCustomerView(navLink.dataset.view);
+        if (!mobileMenuOverlay.classList.contains('hidden')) {
+            closeMobileMenu();
+        }
         return;
     }
 
@@ -303,8 +426,7 @@ function handleCustomerClicks(e) {
 }
 
 function renderCustomerView(viewName) {
-    // Update active state for both desktop and mobile navs
-    document.querySelectorAll('#customer-nav .sidebar-link, #mobile-customer-nav .mobile-nav-link').forEach(link => {
+    document.querySelectorAll('#customer-nav .sidebar-link, #mobile-nav-links .sidebar-link').forEach(link => {
         link.classList.toggle('active', link.dataset.view === viewName);
     });
 
@@ -316,6 +438,7 @@ function renderCustomerView(viewName) {
         case 'orders': renderCustomerOrdersView(contentArea); break;
         case 'profile': renderCustomerProfile(contentArea); break;
     }
+    updateUIText();
 }
 
 async function renderCustomerHomepage(contentArea) {
@@ -323,22 +446,19 @@ async function renderCustomerHomepage(contentArea) {
      contentArea.innerHTML = `
         <div class="space-y-8">
             <div class="text-center p-6 md:p-8 bg-white rounded-xl shadow-md">
-                 <h2 class="text-3xl md:text-4xl font-bold font-serif">${siteSettings.heroTitle || 'Find Your Next Meal'}</h2>
-                 <p class="text-gray-600 mt-2">${siteSettings.heroSubtitle || 'The best restaurants, delivered to your doorstep.'}</p>
+                 <h2 class="text-3xl md:text-4xl font-bold font-serif" data-translate-key="findYourNextMeal">${siteSettings.heroTitle || 'Find Your Next Meal'}</h2>
+                 <p class="text-gray-600 mt-2" data-translate-key="heroSubtitle">${siteSettings.heroSubtitle || 'The best restaurants, delivered to your doorstep.'}</p>
                  <div class="mt-6 max-w-lg mx-auto relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i data-feather="search" class="w-5 h-5 text-gray-400"></i>
-                    </div>
-                    <input type="search" id="restaurant-search" class="input-field w-full p-3 pl-12 rounded-full" placeholder="Search for restaurants or cuisines...">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i data-feather="search" class="w-5 h-5 text-gray-400"></i></div>
+                    <input type="search" id="restaurant-search" class="input-field w-full p-3 pl-12 rounded-full" data-translate-key="searchPlaceholder" placeholder="Search for restaurants or cuisines...">
                  </div>
             </div>
             <div id="ai-recommendations" class="mb-8">
-                <h3 class="text-2xl font-bold font-serif mb-4">Just For You ✨</h3>
-                <p class="text-gray-500">AI recommendations will appear here based on your order history.</p>
+                <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="justForYou">Just For You ✨</h3>
+                <p class="text-gray-500" data-translate-key="aiRecommendationsPlaceholder">AI recommendations will appear here based on your order history.</p>
             </div>
             <div id="all-restaurants-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
-     `;
+        </div>`;
     feather.replace();
      const allListEl = document.getElementById('all-restaurants-list');
      db.collection('restaurants').where("isLocked", "==", false).get().then(snapshot => {
@@ -358,6 +478,7 @@ async function renderCustomerHomepage(contentArea) {
             card.style.display = (name.includes(searchTerm) || cuisine.includes(searchTerm)) ? 'block' : 'none';
         });
      });
+     updateUIText();
 }
 
 function renderRestaurantCard(doc) {
@@ -405,36 +526,33 @@ async function renderCustomerRestaurantView(restaurantId) {
                             <p class="font-bold mt-1">₹${item.price}</p>
                         </div>
                      </div>
-                    <button data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${item.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="btn btn-secondary whitespace-nowrap w-full md:w-auto">Add to Cart</button>
-                </div>
-            `;
+                    <button data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${item.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="btn btn-secondary whitespace-nowrap w-full md:w-auto" data-translate-key="addToCart">Add to Cart</button>
+                </div>`;
         }).join('');
     }
 
     contentArea.innerHTML = `
         <div>
-            <button data-action="back-to-home" class="btn bg-white mb-4 flex items-center gap-2"><i data-feather="arrow-left"></i>Back to Restaurants</button>
+            <button data-action="back-to-home" class="btn bg-white mb-4 flex items-center gap-2"><i data-feather="arrow-left"></i><span data-translate-key="backToRestaurants">Back to Restaurants</span></button>
             <div class="bg-white rounded-xl shadow-md p-6">
                 <h2 class="text-3xl md:text-4xl font-bold font-serif">${restaurant.name}</h2>
                 <p class="text-gray-600 mt-1">${restaurant.cuisine}</p>
                 <div class="mt-6">
-                    <h3 class="text-2xl font-bold font-serif mb-4">Menu</h3>
+                    <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="menu">Menu</h3>
                     <div class="space-y-4">${menuHtml}</div>
                 </div>
             </div>
-        </div>
-    `;
+        </div>`;
     feather.replace();
+    updateUIText();
 }
 
 async function renderCustomerOrdersView(contentArea) {
     contentArea.innerHTML = `
-        <h2 class="text-3xl font-bold font-serif mb-6">My Orders</h2>
-        <div id="customer-orders-list" class="space-y-4"></div>
-    `;
+        <h2 class="text-3xl font-bold font-serif mb-6" data-translate-key="myOrders">My Orders</h2>
+        <div id="customer-orders-list" class="space-y-4"></div>`;
     const listEl = document.getElementById('customer-orders-list');
-    const unsub = db.collection('orders')
-        .where('customerId', '==', currentUser.uid)
+    const unsub = db.collection('orders').where('customerId', '==', currentUser.uid)
         .onSnapshot(snapshot => {
             if (snapshot.empty) {
                 listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">You have no orders.</p>';
@@ -445,6 +563,7 @@ async function renderCustomerOrdersView(contentArea) {
             feather.replace();
         });
     unsubscribeListeners.push(unsub);
+    updateUIText();
 }
 
 function renderCustomerOrderCard(orderId, orderData) {
@@ -477,20 +596,15 @@ function renderCustomerOrderCard(orderId, orderData) {
             </div>
             <div class="mt-4">
                 <p class="font-semibold text-sm mb-1">${currentStatus.text}</p>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                    <div class="${currentStatus.color} h-2.5 rounded-full" style="width: ${currentStatus.progress}"></div>
-                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="${currentStatus.color} h-2.5 rounded-full" style="width: ${currentStatus.progress}"></div></div>
             </div>
-            <div class="mt-4 text-right">
-                ${actionButtons}
-            </div>
-        </div>
-    `;
+            <div class="mt-4 text-right">${actionButtons}</div>
+        </div>`;
 }
 
 function renderCustomerProfile(contentArea) {
     contentArea.innerHTML = `
-        <h2 class="text-3xl font-bold font-serif mb-6">My Profile</h2>
+        <h2 class="text-3xl font-bold font-serif mb-6" data-translate-key="myProfile">My Profile</h2>
         <div class="bg-white p-6 rounded-xl shadow-md">
             <form id="customer-profile-form" class="space-y-4">
                 <div>
@@ -505,20 +619,20 @@ function renderCustomerProfile(contentArea) {
                     <label for="profile-address" class="block text-sm font-medium text-gray-700">Default Delivery Address</label>
                     <textarea id="profile-address" class="input-field mt-1 block w-full" rows="3">${currentUser.address || ''}</textarea>
                 </div>
-                <button type="submit" class="btn btn-primary py-3 px-6 rounded-lg">Update Profile</button>
+                <button type="submit" class="btn btn-primary py-3 px-6 rounded-lg" data-translate-key="updateProfile">Update Profile</button>
             </form>
-        </div>
-    `;
+        </div>`;
+    updateUIText();
 
     document.getElementById('customer-profile-form').addEventListener('submit', async e => {
         e.preventDefault();
-        const name = document.getElementById('profile-name').value;
-        const mobile = document.getElementById('profile-mobile').value;
-        const address = document.getElementById('profile-address').value;
+        const { name, mobile, address } = { 
+            name: document.getElementById('profile-name').value, 
+            mobile: document.getElementById('profile-mobile').value, 
+            address: document.getElementById('profile-address').value 
+        };
         await db.collection('users').doc(currentUser.uid).update({ name, mobile, address });
-        currentUser.name = name;
-        currentUser.mobile = mobile;
-        currentUser.address = address;
+        Object.assign(currentUser, { name, mobile, address });
         showSimpleModal('Success', 'Profile updated successfully!');
     });
 }
@@ -530,8 +644,7 @@ function addToCart(itemId, itemName, itemPrice, restaurantId, restaurantName) {
             "Start New Order?",
             "Your cart has items from another restaurant. Clear the cart to add items from this restaurant?",
             () => {
-                cart = []; // Clear cart
-                cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1, restaurantId, restaurantName });
+                cart = [{ id: itemId, name: itemName, price: itemPrice, quantity: 1, restaurantId, restaurantName }];
                 updateCartButton();
             }
         );
@@ -550,27 +663,16 @@ function addToCart(itemId, itemName, itemPrice, restaurantId, restaurantName) {
 function removeFromCart(itemId) {
     const itemIndex = cart.findIndex(item => item.id === itemId);
     if (itemIndex > -1) {
-        cart[itemIndex].quantity--;
-        if (cart[itemIndex].quantity === 0) {
-            cart.splice(itemIndex, 1);
-        }
+        if (--cart[itemIndex].quantity === 0) cart.splice(itemIndex, 1);
     }
     updateCartButton();
-    if (cart.length === 0) {
-        closeModal();
-    } else {
-        renderCartView(); // Re-render the cart modal
-    }
+    cart.length === 0 ? closeModal() : renderCartView();
 }
 
 function updateCartButton() {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     cartCountEl.textContent = totalItems;
-    if (totalItems > 0) {
-        cartButton.classList.remove('hidden');
-    } else {
-        cartButton.classList.add('hidden');
-    }
+    cartButton.classList.toggle('hidden', totalItems === 0);
 }
 
 function renderCartView() {
@@ -580,7 +682,6 @@ function renderCartView() {
     }
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
     let deliveryFee = (siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100);
     const gst = subtotal * (siteSettings.gstRate / 100);
     let platformFee = (siteSettings.platformFeeType === 'fixed') ? siteSettings.platformFee : subtotal * (siteSettings.platformFee / 100);
@@ -588,23 +689,10 @@ function renderCartView() {
 
     const cartHtml = `
         <form id="order-form">
-            <h3 class="text-2xl font-bold font-serif mb-4">Your Order</h3>
+            <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="yourOrder">Your Order</h3>
             <p class="font-semibold mb-4">${cart[0].restaurantName}</p>
             <div class="space-y-3 mb-4 max-h-60 overflow-y-auto">
-                ${cart.map(item => `
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="font-medium">${item.name}</p>
-                            <p class="text-sm text-gray-500">Qty: ${item.quantity}</p>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <p>₹${(item.price * item.quantity).toFixed(2)}</p>
-                            <button type="button" data-action="remove-from-cart" data-item-id="${item.id}" class="btn btn-danger p-1 rounded-full">
-                                <i data-feather="trash-2" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                `).join('')}
+                ${cart.map(item => `<div class="flex justify-between items-center"><div><p class="font-medium">${item.name}</p><p class="text-sm text-gray-500">Qty: ${item.quantity}</p></div><div class="flex items-center gap-4"><p>₹${(item.price * item.quantity).toFixed(2)}</p><button type="button" data-action="remove-from-cart" data-item-id="${item.id}" class="btn btn-danger p-1 rounded-full"><i data-feather="trash-2" class="w-4 h-4"></i></button></div></div>`).join('')}
             </div>
             <div class="border-t pt-4 space-y-2">
                 <div class="flex justify-between"><p>Subtotal</p><p>₹${subtotal.toFixed(2)}</p></div>
@@ -618,16 +706,12 @@ function renderCartView() {
                 <textarea id="delivery-address" name="deliveryAddress" class="input-field mt-1 block w-full" rows="3" required>${currentUser.address || ''}</textarea>
             </div>
             <div class="mt-6">
-                <button type="submit" data-action="place-order" class="btn btn-primary w-full py-3 rounded-lg">Place Order</button>
-                <button type="button" class="btn bg-gray-200 w-full py-3 rounded-lg mt-2" onclick="closeModal()">Close</button>
+                <button type="submit" data-action="place-order" class="btn btn-primary w-full py-3 rounded-lg" data-translate-key="placeOrder">Place Order</button>
+                <button type="button" class="btn bg-gray-200 w-full py-3 rounded-lg mt-2" onclick="closeModal()" data-translate-key="close">Close</button>
             </div>
-        </form>
-    `;
+        </form>`;
     showModal(cartHtml);
-    document.getElementById('order-form').addEventListener('submit', e => {
-        e.preventDefault();
-        handlePlaceOrder(e.target);
-    });
+    document.getElementById('order-form').addEventListener('submit', e => { e.preventDefault(); handlePlaceOrder(e.target); });
 }
 
 async function handlePlaceOrder(form) {
@@ -638,36 +722,26 @@ async function handlePlaceOrder(form) {
     }
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    let deliveryFee = (siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100);
+    const deliveryFee = (siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100);
     const gst = subtotal * (siteSettings.gstRate / 100);
-    let platformFee = (siteSettings.platformFeeType === 'fixed') ? siteSettings.platformFee : subtotal * (siteSettings.platformFee / 100);
+    const platformFee = (siteSettings.platformFeeType === 'fixed') ? siteSettings.platformFee : subtotal * (siteSettings.platformFee / 100);
     const totalPrice = subtotal + deliveryFee + gst + platformFee;
-    const deliveryPayout = 30.00;
 
     const orderData = {
-        customerId: currentUser.uid,
-        customerName: currentUser.name,
-        deliveryAddress: deliveryAddress,
-        restaurantId: cart[0].restaurantId,
-        restaurantName: cart[0].restaurantName,
+        customerId: currentUser.uid, customerName: currentUser.name, deliveryAddress,
+        restaurantId: cart[0].restaurantId, restaurantName: cart[0].restaurantName,
         items: cart.map(item => ({...item})),
-        subtotal, deliveryFee, platformFee, gst,
-        gstRate: siteSettings.gstRate,
-        deliveryPayout, totalPrice,
-        status: 'placed',
+        subtotal, deliveryFee, platformFee, gst, gstRate: siteSettings.gstRate,
+        deliveryPayout: 30.00, totalPrice, status: 'placed', 
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        deliveryBoyId: null,
-        isReviewed: false
+        deliveryBoyId: null, isReviewed: false
     };
 
     try {
         const docRef = await db.collection('orders').add(orderData);
         await logAudit("Order Placed", `Order ID: ${docRef.id}`);
         showSimpleModal('Order Placed!', 'Your order has been placed successfully.');
-        cart = [];
-        updateCartButton();
-        closeModal();
-        renderCustomerView('orders');
+        cart = []; updateCartButton(); closeModal(); renderCustomerView('orders');
     } catch (error) {
         console.error("Error placing order: ", error);
         showSimpleModal('Order Error', 'There was an error placing your order. Please try again.');
@@ -677,183 +751,86 @@ async function handlePlaceOrder(form) {
 // --- UTILITY, BILLING & RATING FUNCTIONS ---
 async function renderOrderBill(orderId, targetContainer = null) {
     const orderDoc = await db.collection('orders').doc(orderId).get();
-    if (!orderDoc.exists) {
-        showSimpleModal("Error", "Order not found.");
-        return;
-    }
+    if (!orderDoc.exists) { showSimpleModal("Error", "Order not found."); return; }
     const order = orderDoc.data();
-    const restaurantDoc = await db.collection('restaurants').doc(order.restaurantId).get();
-    const restaurant = restaurantDoc.data();
-    const customerDoc = await db.collection('users').doc(order.customerId).get();
-    const customer = customerDoc.data();
+    const restaurant = (await db.collection('restaurants').doc(order.restaurantId).get()).data();
+    const customer = (await db.collection('users').doc(order.customerId).get()).data();
 
     const billHtml = `
-        <div id="printable-bill">
-            <div class="p-6 bg-white">
-                <div class="text-center mb-8">
-                    <h2 class="text-3xl font-bold font-serif">${siteSettings.websiteName || 'UniFood'}</h2>
-                    <p class="text-lg font-semibold">${order.restaurantName}</p>
-                    <p class="text-sm text-gray-600">${restaurant.address}</p>
-                </div>
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 class="text-2xl font-bold font-serif">Tax Invoice</h3>
-                        <p class="text-sm text-gray-500">Invoice #: <strong>${orderId.substring(0, 8).toUpperCase()}</strong></p>
-                        <p class="text-sm text-gray-500">Date: ${new Date(order.createdAt.seconds * 1000).toLocaleString()}</p>
-                    </div>
-                    <div id="qrcode-container" class="p-1 bg-white border rounded-lg"></div>
-                </div>
-                <div class="border-y py-4 mb-6">
-                    <p class="font-bold">Billed To:</p>
-                    <p>${order.customerName}</p>
-                    <p>${order.deliveryAddress}</p>
-                    <p>Email: ${customer.email}</p>
-                    <p>Mobile: ${customer.mobile || 'N/A'}</p>
-                </div>
-                <table class="w-full text-sm my-6">
-                    <thead class="border-b bg-gray-50">
-                        <tr>
-                            <th class="text-left p-2">Item</th>
-                            <th class="text-center p-2">Qty</th>
-                            <th class="text-right p-2">Price</th>
-                            <th class="text-right p-2">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${order.items.map(item => `
-                            <tr class="border-b">
-                                <td class="p-2">${item.name}</td>
-                                <td class="text-center p-2">${item.quantity}</td>
-                                <td class="text-right p-2">₹${item.price.toFixed(2)}</td>
-                                <td class="text-right p-2">₹${(item.price * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                    <tfoot class="font-semibold">
-                        <tr>
-                            <td colspan="3" class="text-right p-2 border-t">Subtotal</td>
-                            <td class="text-right p-2 border-t">₹${order.subtotal.toFixed(2)}</td>
-                        </tr>
-                         <tr>
-                            <td colspan="3" class="text-right p-2">Delivery Fee</td>
-                            <td class="text-right p-2">₹${(order.deliveryFee || 0).toFixed(2)}</td>
-                        </tr>
-                         <tr>
-                            <td colspan="3" class="text-right p-2">Platform Fee</td>
-                            <td class="text-right p-2">₹${(order.platformFee || 0).toFixed(2)}</td>
-                        </tr>
-                         <tr>
-                            <td colspan="3" class="text-right p-2">GST (${order.gstRate || siteSettings.gstRate}%)</td>
-                            <td class="text-right p-2">₹${order.gst.toFixed(2)}</td>
-                        </tr>
-                        <tr class="text-xl font-bold border-t-2 bg-gray-100">
-                            <td colspan="3" class="text-right p-2">Grand Total</td>
-                            <td class="text-right p-2">₹${order.totalPrice.toFixed(2)}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-                <p class="text-center text-xs text-gray-500">Thank you for your order!</p>
+        <div id="printable-bill"><div class="p-6 bg-white">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold font-serif">${siteSettings.websiteName || 'UniFood'}</h2>
+                <p class="text-lg font-semibold">${order.restaurantName}</p>
+                <p class="text-sm text-gray-600">${restaurant.address}</p>
             </div>
-        </div>
-        <div class="flex justify-end gap-4 mt-4">
-            <button class="btn bg-gray-200" onclick="closeModal()">Close</button>
-            <button class="btn btn-primary" onclick="downloadBillAsPDF('${orderId}')">Download Bill</button>
-        </div>
-    `;
-    if(targetContainer) {
-        targetContainer.innerHTML = billHtml;
-    } else {
-        showModal(billHtml);
-    }
-    new QRCode(document.getElementById("qrcode-container"), {
-        text: orderId,
-        width: 80,
-        height: 80,
-    });
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold font-serif">Tax Invoice</h3>
+                    <p class="text-sm text-gray-500">Invoice #: <strong>${orderId.substring(0, 8).toUpperCase()}</strong></p>
+                    <p class="text-sm text-gray-500">Date: ${new Date(order.createdAt.seconds * 1000).toLocaleString()}</p>
+                </div>
+                <div id="qrcode-container" class="p-1 bg-white border rounded-lg"></div>
+            </div>
+            <div class="border-y py-4 mb-6">
+                <p class="font-bold">Billed To:</p>
+                <p>${order.customerName}</p><p>${order.deliveryAddress}</p>
+                <p>Email: ${customer.email}</p><p>Mobile: ${customer.mobile || 'N/A'}</p>
+            </div>
+            <table class="w-full text-sm my-6">
+                <thead class="border-b bg-gray-50"><tr><th class="text-left p-2">Item</th><th class="text-center p-2">Qty</th><th class="text-right p-2">Price</th><th class="text-right p-2">Total</th></tr></thead>
+                <tbody>${order.items.map(item => `<tr class="border-b"><td class="p-2">${item.name}</td><td class="text-center p-2">${item.quantity}</td><td class="text-right p-2">₹${item.price.toFixed(2)}</td><td class="text-right p-2">₹${(item.price * item.quantity).toFixed(2)}</td></tr>`).join('')}</tbody>
+                <tfoot class="font-semibold">
+                    <tr><td colspan="3" class="text-right p-2 border-t">Subtotal</td><td class="text-right p-2 border-t">₹${order.subtotal.toFixed(2)}</td></tr>
+                    <tr><td colspan="3" class="text-right p-2">Delivery Fee</td><td class="text-right p-2">₹${(order.deliveryFee || 0).toFixed(2)}</td></tr>
+                    <tr><td colspan="3" class="text-right p-2">Platform Fee</td><td class="text-right p-2">₹${(order.platformFee || 0).toFixed(2)}</td></tr>
+                    <tr><td colspan="3" class="text-right p-2">GST (${order.gstRate || siteSettings.gstRate}%)</td><td class="text-right p-2">₹${order.gst.toFixed(2)}</td></tr>
+                    <tr class="text-xl font-bold border-t-2 bg-gray-100"><td colspan="3" class="text-right p-2">Grand Total</td><td class="text-right p-2">₹${order.totalPrice.toFixed(2)}</td></tr>
+                </tfoot>
+            </table>
+            <p class="text-center text-xs text-gray-500">Thank you for your order!</p>
+        </div></div>
+        <div class="flex justify-end gap-4 mt-4"><button class="btn bg-gray-200" onclick="closeModal()">Close</button><button class="btn btn-primary" onclick="downloadBillAsPDF('${orderId}')">Download Bill</button></div>`;
+    
+    targetContainer ? targetContainer.innerHTML = billHtml : showModal(billHtml);
+    new QRCode(document.getElementById("qrcode-container"), { text: orderId, width: 80, height: 80 });
 }
 
 function downloadBillAsPDF(orderId) {
     const element = document.getElementById('printable-bill');
-    const opt = {
-      margin:       0.5,
-      filename:     `UniFood_Invoice_${orderId.substring(0,8)}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+    const opt = { margin: 0.5, filename: `UniFood_Invoice_${orderId.substring(0,8)}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
     html2pdf().from(element).set(opt).save();
 }
         
 async function showRatingForm(orderId) {
-    const orderDoc = await db.collection('orders').doc(orderId).get();
-    const order = orderDoc.data();
-
+    const order = (await db.collection('orders').doc(orderId).get()).data();
     const formHtml = `
         <form id="rating-form" class="space-y-6">
             <h3 class="text-2xl font-bold font-serif mb-4">Rate Your Order</h3>
-            
-            <div class="p-4 border rounded-lg">
-                <p class="font-semibold">Rate the Restaurant: ${order.restaurantName}</p>
-                <div class="rating flex items-center text-3xl" data-type="restaurant">
-                    <span class="star" data-value="1"><i data-feather="star"></i></span>
-                    <span class="star" data-value="2"><i data-feather="star"></i></span>
-                    <span class="star" data-value="3"><i data-feather="star"></i></span>
-                    <span class="star" data-value="4"><i data-feather="star"></i></span>
-                    <span class="star" data-value="5"><i data-feather="star"></i></span>
-                </div>
-                <textarea name="restaurantReview" class="input-field w-full mt-2" rows="2" placeholder="Tell us about the food..."></textarea>
-            </div>
-
-            <div class="p-4 border rounded-lg">
-                <p class="font-semibold">Rate the Delivery by: ${order.deliveryBoyName || 'UniFood'}</p>
-                <div class="rating flex items-center text-3xl" data-type="delivery">
-                    <span class="star" data-value="1"><i data-feather="star"></i></span>
-                    <span class="star" data-value="2"><i data-feather="star"></i></span>
-                    <span class="star" data-value="3"><i data-feather="star"></i></span>
-                    <span class="star" data-value="4"><i data-feather="star"></i></span>
-                    <span class="star" data-value="5"><i data-feather="star"></i></span>
-                </div>
-                <textarea name="deliveryReview" class="input-field w-full mt-2" rows="2" placeholder="How was the delivery experience?"></textarea>
-            </div>
-            
-            <input type="hidden" name="restaurantRating" value="0">
-            <input type="hidden" name="deliveryRating" value="0">
-            
-            <div class="flex justify-end gap-4 pt-4">
-                <button type="button" class="btn bg-gray-200" onclick="closeModal()">Skip</button>
-                <button type="submit" class="btn btn-primary">Submit Review</button>
-            </div>
-        </form>
-    `;
+            <div class="p-4 border rounded-lg"><p class="font-semibold">Rate the Restaurant: ${order.restaurantName}</p><div class="rating flex items-center text-3xl" data-type="restaurant">${[...Array(5)].map((_,i)=>`<span class="star" data-value="${i+1}"><i data-feather="star"></i></span>`).join('')}</div><textarea name="restaurantReview" class="input-field w-full mt-2" rows="2" placeholder="Tell us about the food..."></textarea></div>
+            <div class="p-4 border rounded-lg"><p class="font-semibold">Rate the Delivery by: ${order.deliveryBoyName || 'UniFood'}</p><div class="rating flex items-center text-3xl" data-type="delivery">${[...Array(5)].map((_,i)=>`<span class="star" data-value="${i+1}"><i data-feather="star"></i></span>`).join('')}</div><textarea name="deliveryReview" class="input-field w-full mt-2" rows="2" placeholder="How was the delivery experience?"></textarea></div>
+            <input type="hidden" name="restaurantRating" value="0"><input type="hidden" name="deliveryRating" value="0">
+            <div class="flex justify-end gap-4 pt-4"><button type="button" class="btn bg-gray-200" onclick="closeModal()">Skip</button><button type="submit" class="btn btn-primary">Submit Review</button></div>
+        </form>`;
     showModal(formHtml);
     
     document.querySelectorAll('.rating .star').forEach(star => {
         star.addEventListener('click', () => {
-            const ratingContainer = star.parentElement;
-            const ratingType = ratingContainer.dataset.type;
-            const value = parseInt(star.dataset.value);
-            document.querySelector(`input[name="${ratingType}Rating"]`).value = value;
-            
-            ratingContainer.querySelectorAll('.star').forEach(s => {
-                s.classList.toggle('selected', parseInt(s.dataset.value) <= value);
-                s.querySelector('i').style.fill = parseInt(s.dataset.value) <= value ? '#f59e0b' : 'none';
+            const container = star.parentElement; const type = container.dataset.type; const value = parseInt(star.dataset.value);
+            document.querySelector(`input[name="${type}Rating"]`).value = value;
+            container.querySelectorAll('.star').forEach(s => {
+                const sValue = parseInt(s.dataset.value);
+                s.classList.toggle('selected', sValue <= value); s.querySelector('i').style.fill = sValue <= value ? '#f59e0b' : 'none';
             });
         });
     });
-
     document.getElementById('rating-form').addEventListener('submit', e => handlePostReview(e, orderId, order));
 }
 
 async function handlePostReview(e, orderId, orderData) {
-    e.preventDefault();
-    const form = e.target;
+    e.preventDefault(); const form = e.target;
     const restaurantRating = parseInt(form.elements.restaurantRating.value);
     const deliveryRating = parseInt(form.elements.deliveryRating.value);
-
-    if (restaurantRating === 0 || deliveryRating === 0) {
-        showSimpleModal("Rating Required", "Please select a star rating for both the restaurant and the delivery.");
-        return;
-    }
+    if (restaurantRating === 0 || deliveryRating === 0) { showSimpleModal("Rating Required", "Please select a star rating for both."); return; }
 
     const reviewData = {
         orderId, customerId: currentUser.uid, customerName: currentUser.name,
@@ -863,89 +840,45 @@ async function handlePostReview(e, orderId, orderData) {
         deliveryRating, deliveryReview: form.elements.deliveryReview.value,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-
     await db.collection('reviews').add(reviewData);
     await db.collection('orders').doc(orderId).update({ isReviewed: true });
 
-    // Update restaurant average rating
-    const restRef = db.collection('restaurants').doc(orderData.restaurantId);
-    db.runTransaction(async (transaction) => {
-        const restDoc = await transaction.get(restRef);
-        const data = restDoc.data();
-        const newAvgRating = ((data.avgRating || 0) * (data.ratingCount || 0) + restaurantRating) / ((data.ratingCount || 0) + 1);
-        transaction.update(restRef, {
-            avgRating: newAvgRating,
-            ratingCount: firebase.firestore.FieldValue.increment(1)
-        });
-    });
-
-    // Update delivery boy average rating
-    if (orderData.deliveryBoyId) {
-        const deliveryRef = db.collection('users').doc(orderData.deliveryBoyId);
+    const updateAvgRating = async (collection, docId, newRating) => {
+        if (!docId) return;
+        const ref = db.collection(collection).doc(docId);
         db.runTransaction(async (transaction) => {
-            const deliveryDoc = await transaction.get(deliveryRef);
-            const data = deliveryDoc.data();
-            const newAvgRating = ((data.avgRating || 0) * (data.ratingCount || 0) + deliveryRating) / ((data.ratingCount || 0) + 1);
-            transaction.update(deliveryRef, {
-                avgRating: newAvgRating,
-                ratingCount: firebase.firestore.FieldValue.increment(1)
-            });
+            const doc = await transaction.get(ref); const data = doc.data();
+            const newAvg = ((data.avgRating || 0) * (data.ratingCount || 0) + newRating) / ((data.ratingCount || 0) + 1);
+            transaction.update(ref, { avgRating: newAvg, ratingCount: firebase.firestore.FieldValue.increment(1) });
         });
-    }
+    };
+    await updateAvgRating('restaurants', orderData.restaurantId, restaurantRating);
+    await updateAvgRating('users', orderData.deliveryBoyId, deliveryRating);
     
     await logAudit("Review Submitted", `Order ID: ${orderId}`);
-    showSimpleModal("Thank You!", "Your review has been submitted.");
-    closeModal();
+    showSimpleModal("Thank You!", "Your review has been submitted."); closeModal();
 }
 
 function showModal(contentHtml) {
     modalContainer.innerHTML = `<div class="modal-content">${contentHtml}</div>`;
     modalContainer.classList.add('active');
     feather.replace();
+    updateUIText();
 }
 
 function showSimpleModal(title, message, onOk) {
-    const modalHtml = `
-        <div class="text-center">
-            <h3 class="text-2xl font-bold font-serif mb-2">${title}</h3>
-            <p class="text-gray-600 mb-6">${message}</p>
-            <button id="simple-modal-ok" class="btn btn-primary rounded-lg py-2 px-12">OK</button>
-        </div>
-    `;
-    showModal(modalHtml);
-    document.getElementById('simple-modal-ok').addEventListener('click', () => {
-        if (onOk) onOk();
-        closeModal();
-    });
+    showModal(`<div class="text-center"><h3 class="text-2xl font-bold font-serif mb-2">${title}</h3><p class="text-gray-600 mb-6">${message}</p><button id="simple-modal-ok" class="btn btn-primary rounded-lg py-2 px-12">OK</button></div>`);
+    document.getElementById('simple-modal-ok').addEventListener('click', () => { if (onOk) onOk(); closeModal(); });
 }
 
 function showConfirmationModal(title, message, onConfirm, onCancel) {
-    const modalHtml = `
-        <div class="text-center">
-            <h3 class="text-2xl font-bold font-serif mb-2">${title}</h3>
-            <p class="text-gray-600 mb-6">${message}</p>
-            <div class="flex justify-center gap-4">
-                <button id="confirm-cancel" class="btn bg-gray-200 rounded-lg py-2 px-8">Cancel</button>
-                <button id="confirm-ok" class="btn btn-danger rounded-lg py-2 px-8">Confirm</button>
-            </div>
-        </div>
-    `;
-    showModal(modalHtml);
-
-    document.getElementById('confirm-ok').addEventListener('click', () => {
-        if (onConfirm) onConfirm();
-        closeModal();
-    });
-    document.getElementById('confirm-cancel').addEventListener('click', () => {
-        if (onCancel) onCancel();
-        closeModal();
-    });
+    showModal(`<div class="text-center"><h3 class="text-2xl font-bold font-serif mb-2">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex justify-center gap-4"><button id="confirm-cancel" class="btn bg-gray-200 rounded-lg py-2 px-8">Cancel</button><button id="confirm-ok" class="btn btn-danger rounded-lg py-2 px-8">Confirm</button></div></div>`);
+    document.getElementById('confirm-ok').addEventListener('click', () => { if (onConfirm) onConfirm(); closeModal(); });
+    document.getElementById('confirm-cancel').addEventListener('click', () => { if (onCancel) onCancel(); closeModal(); });
 }
 
 function closeModal() {
-    if (document.getElementById('qr-reader')) {
-        stopScanner();
-    }
+    if (document.getElementById('qr-reader') && html5QrCode && html5QrCode.isScanning) stopScanner();
     modalContainer.classList.remove('active');
     modalContainer.innerHTML = '';
 }
@@ -953,9 +886,7 @@ function closeModal() {
 function cleanupListeners() {
     unsubscribeListeners.forEach(unsub => unsub());
     unsubscribeListeners = [];
-     if (html5QrCode && html5QrCode.isScanning) {
-        stopScanner();
-    }
+    if (html5QrCode && html5QrCode.isScanning) stopScanner();
 }
 
 // --- MOBILE MENU LOGIC ---
@@ -972,28 +903,19 @@ function closeMobileMenu() {
     mobileMenuOverlay.classList.add('opacity-0');
     mobileMenu.classList.add('translate-x-full');
     document.body.style.overflow = '';
-    setTimeout(() => {
-        mobileMenuOverlay.classList.add('hidden');
-    }, 300);
+    setTimeout(() => { mobileMenuOverlay.classList.add('hidden'); }, 300);
 }
 
 mobileMenuButton.addEventListener('click', openMobileMenu);
 closeMobileMenuButton.addEventListener('click', closeMobileMenu);
-mobileMenuOverlay.addEventListener('click', (e) => {
-    if (e.target === mobileMenuOverlay) {
-        closeMobileMenu();
-    }
-});
-
+mobileMenuOverlay.addEventListener('click', (e) => { if (e.target === mobileMenuOverlay) closeMobileMenu(); });
 
 // --- INITIALIZE APP ON LOAD ---
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 const handleLogout = () => {
     cleanupListeners();
-    auth.signOut().then(() => {
-        window.location.reload();
-    });
+    auth.signOut().then(() => { window.location.reload(); });
 };
 
 logoutBtn.addEventListener('click', handleLogout);
@@ -1005,11 +927,7 @@ const chatbotWindow = document.getElementById('chatbot-window');
 const chatbotInput = document.getElementById('chatbot-input');
 const chatbotMessages = document.getElementById('chatbot-messages');
 
-chatbotToggle.addEventListener('click', () => {
-    chatbotWindow.classList.toggle('hidden');
-    feather.replace();
-});
-
+chatbotToggle.addEventListener('click', () => chatbotWindow.classList.toggle('hidden'));
 chatbotInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && e.target.value.trim() !== '') {
         const userMessage = e.target.value.trim();
@@ -1025,27 +943,17 @@ function appendMessage(text, sender) {
     messageDiv.style.maxWidth = '80%';
     messageDiv.textContent = text;
     chatbotMessages.appendChild(messageDiv);
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight; // Auto-scroll
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
 }
 
 function getAiResponse(message) {
     const lowerCaseMessage = message.toLowerCase();
     let response = "I'm not sure how to answer that. Try asking about orders, restaurants, or your profile.";
-
-    if (lowerCaseMessage.includes("track my order")) {
-        response = "Sure! Can you please provide the order ID?";
-    } else if (lowerCaseMessage.includes("help")) {
-        response = `I can help with tracking orders, finding restaurants, and answering questions about your account. What do you need assistance with?`;
-    } else if (lowerCaseMessage.includes("best restaurants")) {
-        response = "Based on your recent orders, I recommend trying 'The Pizza Palace' or 'Curry Kingdom'.";
-    } else if (lowerCaseMessage.includes("how to add menu item") && currentUser?.role === 'restaurant') {
-        response = "Go to 'Menu Management' in your portal and click the 'Add Item' button. I can guide you through the steps if you'd like!";
-    }
-
-    setTimeout(() => {
-        appendMessage(response, 'ai');
-    }, 500);
+    if (lowerCaseMessage.includes("track my order")) response = "Sure! Can you please provide the order ID?";
+    else if (lowerCaseMessage.includes("help")) response = `I can help with tracking orders, finding restaurants, and answering questions about your account. What do you need assistance with?`;
+    else if (lowerCaseMessage.includes("best restaurants")) response = "Based on your recent orders, I recommend trying 'The Pizza Palace' or 'Curry Kingdom'.";
+    else if (lowerCaseMessage.includes("how to add menu item") && currentUser?.role === 'restaurant') response = "Go to 'Menu Management' in your portal and click the 'Add Item' button. I can guide you through the steps if you'd like!";
+    setTimeout(() => { appendMessage(response, 'ai'); }, 500);
 }
 
 feather.replace();
-// --- END OF AI CHATBOT SCRIPT ---
