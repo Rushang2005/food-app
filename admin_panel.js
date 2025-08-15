@@ -1,4 +1,4 @@
- // --- FIREBASE INITIALIZATION ---
+// --- FIREBASE INITIALIZATION ---
         const firebaseConfig = {
           apiKey: "AIzaSyAl16jGICR3WNOPMm_11SNsZ92YEowT-j8",
           authDomain: "unifood-fb223.firebaseapp.com",
@@ -151,8 +151,8 @@
         function handleAdminClicks(e) {
             const sidebarLink = e.target.closest('.sidebar-link');
             if (sidebarLink) {
-                if (sidebarLink.dataset.view === 'scan-order') {
-                    stopScanner(); // Stop scanner if running
+                if (sidebarLink.dataset.view !== 'scan-order') {
+                    stopScanner(); // Stop scanner if running and navigating away
                 }
                 renderAdminView(sidebarLink.dataset.view);
                 return;
@@ -979,15 +979,17 @@
         }
 
         function startScanner() {
-            const contentArea = document.getElementById('admin-main-content');
             document.querySelector('[data-action=start-scan]').classList.add('hidden');
             document.querySelector('[data-action=stop-scan]').classList.remove('hidden');
+            const resultsEl = document.getElementById('qr-reader-results');
+            const detailsContainer = document.getElementById('scanned-order-details');
 
             const onScanSuccess = (decodedText, decodedResult) => {
                 console.log(`Code matched = ${decodedText}`, decodedResult);
                 stopScanner();
-                contentArea.querySelector('#qr-reader-results').innerHTML = `<span class="text-green-600 font-semibold">Success! Scanned Order ID: ${decodedText}</span>`;
-                renderOrderBill(decodedText, contentArea.querySelector('#scanned-order-details'));
+                resultsEl.innerHTML = `<span class="text-green-600 font-semibold">Success! Scanned Order ID: ${decodedText}</span>`;
+                detailsContainer.innerHTML = '<p class="text-center">Loading order details...</p>';
+                renderOrderBill(decodedText, detailsContainer);
             };
 
             const onScanFailure = (error) => {
@@ -1002,19 +1004,22 @@
                 .catch(err => {
                     showSimpleModal("Camera Error", "Could not start camera. Please ensure you have a camera and have granted permission.");
                     console.error("Camera start error", err);
+                    stopScanner();
                 });
         }
 
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().then(ignore => {
-                    document.querySelector('[data-action=start-scan]').classList.remove('hidden');
-                    document.querySelector('[data-action=stop-scan]').classList.add('hidden');
                     console.log("QR Code scanning stopped.");
                 }).catch(err => {
                     console.error("QR Code scanning failed to stop.", err);
                 });
             }
+            const startBtn = document.querySelector('[data-action=start-scan]');
+            const stopBtn = document.querySelector('[data-action=stop-scan]');
+            if (startBtn) startBtn.classList.remove('hidden');
+            if (stopBtn) stopBtn.classList.add('hidden');
         }
 
         async function renderAllReviewsView(contentArea) {
@@ -1053,7 +1058,12 @@
         async function renderOrderBill(orderId, targetContainer = null) {
             const orderDoc = await db.collection('orders').doc(orderId).get();
             if (!orderDoc.exists) {
-                showSimpleModal("Error", "Order not found.");
+                const content = `<div class="text-center p-4 bg-red-100 text-red-700 rounded-lg">Order with ID <strong>${orderId}</strong> not found.</div>`;
+                 if (targetContainer) {
+                    targetContainer.innerHTML = content;
+                } else {
+                    showSimpleModal("Error", "Order not found.");
+                }
                 return;
             }
             const order = orderDoc.data();
@@ -1069,7 +1079,7 @@
             }));
 
             const billHtml = `
-                <div id="printable-bill" class="bg-white">
+                <div id="printable-bill" class="bg-white rounded-xl shadow-lg overflow-hidden">
                     <div class="p-6">
                         <div class="text-center mb-8">
                             <h2 class="text-3xl font-bold font-serif">${siteSettings.websiteName || 'UniFood'}</h2>
@@ -1140,7 +1150,7 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-4 mt-4 no-print">
-                    <button class="btn bg-gray-200" onclick="closeModal()">Close</button>
+                    ${!targetContainer ? `<button class="btn bg-gray-200" onclick="closeModal()">Close</button>` : ''}
                     <button class="btn btn-primary" onclick="downloadBillAsPDF('${orderId}')">Download PDF</button>
                 </div>
             `;
@@ -1223,9 +1233,7 @@
         function cleanupListeners() {
             unsubscribeListeners.forEach(unsub => unsub());
             unsubscribeListeners = [];
-             if (html5QrCode && html5QrCode.isScanning) {
-                stopScanner();
-            }
+            stopScanner();
         }
 
         // --- INITIALIZE APP ON LOAD ---
