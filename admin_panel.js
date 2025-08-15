@@ -27,6 +27,14 @@
         const websiteNameHeader = document.getElementById('website-name-header');
         const websiteLogoHeader = document.getElementById('website-logo-header');
 
+        // --- MOBILE MENU REFERENCES ---
+        const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMobileMenuButton = document.getElementById('close-mobile-menu');
+        const mobileUserInfo = document.getElementById('mobile-user-info');
+        const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+
 
         // --- CORE APP LOGIC ---
 
@@ -36,33 +44,55 @@
                 siteSettings = settingsDoc.data();
             }
             applySiteSettings();
+            
+            setupMobileMenuHandlers();
 
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists && (userDoc.data().role === 'admin' || userDoc.data().role === 'superadmin')) {
                         currentUser = { uid: user.uid, ...userDoc.data() };
-                        userInfo.innerHTML = `<p class="font-semibold">${currentUser.name}</p><p class="text-xs text-gray-500 capitalize">${currentUser.role}</p>`;
+                        const userHtml = `<p class="font-semibold">${currentUser.name}</p><p class="text-xs text-gray-500 capitalize">${currentUser.role}</p>`;
+                        userInfo.innerHTML = userHtml;
+                        mobileUserInfo.innerHTML = userHtml;
                         loadAdminPortal();
                     } else {
-                        // User is logged in but not an admin/superadmin. Show access denied message.
                         document.body.innerHTML = `<div style="text-align: center; padding: 50px; font-family: sans-serif; color: #333;">
                             <h1 style="color: #d9534f;">Access Denied</h1>
                             <p>You do not have the required permissions to view this page.</p>
                             <p style="color: #777;">Redirecting to login page...</p>
                         </div>`;
                         setTimeout(() => {
-                            auth.signOut(); // Log out the user before redirecting
+                            auth.signOut();
                             window.location.href = 'login.html';
                         }, 3000);
                     }
                 } else {
-                    // No user is logged in, redirect to login page.
                     window.location.href = 'login.html';
                 }
             });
         }
         
+        function setupMobileMenuHandlers() {
+            const openMenu = () => {
+                mobileMenuOverlay.classList.remove('hidden');
+                setTimeout(() => mobileMenu.classList.remove('translate-x-full'), 10);
+            };
+            const closeMenu = () => {
+                mobileMenu.classList.add('translate-x-full');
+                setTimeout(() => mobileMenuOverlay.classList.add('hidden'), 300);
+            };
+
+            mobileMenuButton.addEventListener('click', openMenu);
+            closeMobileMenuButton.addEventListener('click', closeMenu);
+            mobileMenuOverlay.addEventListener('click', (e) => {
+                if (e.target === mobileMenuOverlay) {
+                    closeMenu();
+                }
+            });
+             mobileLogoutBtn.addEventListener('click', () => auth.signOut());
+        }
+
         function applySiteSettings() {
             if (siteSettings.websiteName) {
                 websiteNameHeader.textContent = siteSettings.websiteName + " Admin";
@@ -103,6 +133,21 @@
                 mainContent.innerHTML = '';
                 mainContent.appendChild(template.content.cloneNode(true));
                 feather.replace();
+                
+                const desktopNav = document.getElementById('admin-nav');
+                const mobileNavContainer = document.getElementById('mobile-nav-container');
+                if (desktopNav && mobileNavContainer) {
+                    const mobileNavClone = desktopNav.cloneNode(true);
+                    mobileNavClone.id = 'mobile-sidebar-nav';
+                    mobileNavClone.addEventListener('click', (e) => {
+                         if (e.target.closest('.sidebar-link')) {
+                            mobileMenu.classList.add('translate-x-full');
+                            setTimeout(() => mobileMenuOverlay.classList.add('hidden'), 300);
+                         }
+                    });
+                    mobileNavContainer.appendChild(mobileNavClone);
+                }
+
                 initializeAdminPortal();
             } else {
                 mainContent.innerHTML = `<p class="text-center text-red-500">Error: Admin portal template not found.</p>`;
@@ -111,8 +156,10 @@
 
         // --- ADMIN PORTAL ---
         function initializeAdminPortal() {
-            mainContent.addEventListener('click', handleAdminClicks);
-            document.getElementById('admin-main-content')?.addEventListener('click', handleAdminClicks);
+            // *** MODIFIED ***
+            // Listener for all actions. Attached to body to capture clicks from the mobile slide-out menu.
+            document.body.addEventListener('click', handleAdminClicks);
+
             renderAdminView('dashboard');
             listenForCancellationRequests();
         }
@@ -152,7 +199,7 @@
             const sidebarLink = e.target.closest('.sidebar-link');
             if (sidebarLink) {
                 if (sidebarLink.dataset.view !== 'scan-order') {
-                    stopScanner(); // Stop scanner if running and navigating away
+                    stopScanner(); 
                 }
                 renderAdminView(sidebarLink.dataset.view);
                 return;
@@ -199,12 +246,9 @@
         }
 
         function renderAdminView(viewName, contentAreaId = 'admin-main-content') {
-            const nav = document.getElementById('admin-nav');
-            if (nav) {
-                nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
-                const activeLink = nav.querySelector(`[data-view="${viewName}"]`);
-                if(activeLink) activeLink.classList.add('active');
-            }
+            document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll(`[data-view="${viewName}"]`).forEach(activeLink => activeLink.classList.add('active'));
+
             const contentArea = document.getElementById(contentAreaId);
             if (!contentArea) return;
             switch(viewName) {
@@ -259,16 +303,16 @@
 
             if (decision === 'approve') {
                 await orderRef.update({
-                    status: 'accepted', // Make it available again
+                    status: 'accepted', 
                     deliveryBoyId: null,
                     deliveryBoyName: null,
                 });
                 await requestRef.update({ status: 'approved' });
                 await logAudit("Cancellation Approved", `Request ID: ${requestId}`);
                 showSimpleModal("Success", "Cancellation approved. The order is now available for other delivery partners.");
-            } else { // Deny
+            } else { 
                 await orderRef.update({
-                    status: requestData.previousStatus // Revert to original status
+                    status: requestData.previousStatus 
                 });
                 await requestRef.update({ status: 'denied' });
                 await logAudit("Cancellation Denied", `Request ID: ${requestId}`);
@@ -1240,17 +1284,14 @@
         document.addEventListener('DOMContentLoaded', initializeApp);
 
        // --- LOGOUT ---
-document.getElementById('logout-btn').addEventListener('click', () => {
-    // Sign the user out from Firebase Authentication
-    auth.signOut().then(() => {
-        // Sign-out successful, now redirect to the login page.
-        console.log('User signed out successfully.');
-        window.location.href = 'login.html';
-    }).catch((error) => {
-        // An error happened during sign-out.
-        console.error('Sign out error', error);
-        alert('An error occurred while logging out. Please try again.');
-    });
-});
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                console.log('User signed out successfully.');
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error('Sign out error', error);
+                alert('An error occurred while logging out. Please try again.');
+            });
+        });
 
         feather.replace();
