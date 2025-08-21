@@ -50,8 +50,22 @@
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     const userDoc = await db.collection('users').doc(user.uid).get();
-                    if (userDoc.exists && (userDoc.data().role === 'admin' || userDoc.data().role === 'superadmin')) {
-                        currentUser = { uid: user.uid, ...userDoc.data() };
+                    const userData = userDoc.data();
+
+                    // START: New Maintenance Check
+                    if (siteSettings.adminMaintenanceMode && userData && userData.role === 'admin') {
+                        document.body.innerHTML = `<div style="text-align: center; padding: 50px; font-family: sans-serif; color: #333;">
+                            <h1 style="color: #333;">Admin Panel Under Maintenance</h1>
+                            <p>The admin panel is temporarily unavailable. Please try again later.</p>
+                            <p style="color: #777; margin-top: 20px;">You have been logged out.</p>
+                        </div>`;
+                        auth.signOut();
+                        return; // Stop execution
+                    }
+                    // END: New Maintenance Check
+
+                    if (userDoc.exists && (userData.role === 'admin' || userData.role === 'superadmin')) {
+                        currentUser = { uid: user.uid, ...userData };
                         const userHtml = `<p class="font-semibold">${currentUser.name}</p><p class="text-xs text-gray-500 capitalize">${currentUser.role}</p>`;
                         userInfo.innerHTML = userHtml;
                         mobileUserInfo.innerHTML = userHtml;
@@ -156,10 +170,7 @@
 
         // --- ADMIN PORTAL ---
         function initializeAdminPortal() {
-            // *** MODIFIED ***
-            // Listener for all actions. Attached to body to capture clicks from the mobile slide-out menu.
             document.body.addEventListener('click', handleAdminClicks);
-
             renderAdminView('dashboard');
             listenForCancellationRequests();
         }
@@ -227,6 +238,7 @@
                     case 'edit-restaurant': showEditRestaurantForm(id); break;
                     case 'change-password': handleChangeRestaurantPassword(id); break;
                     case 'toggle-lock': handleToggleLock(id); break;
+                    case 'toggle-visibility': handleToggleVisibility(id); break;
                     case 'manage-menu': renderAdminMenuManagementView(id); break;
                     case 'back-to-restaurants': renderAdminView('restaurants'); break;
                     case 'back-to-delivery-boys': renderAdminView('delivery-boys'); break;
@@ -394,6 +406,9 @@
             const lockButtonText = restaurant.isLocked ? 'Unlock Account' : 'Lock Account';
             const lockButtonClass = restaurant.isLocked ? 'btn-primary' : 'btn-danger';
 
+            const visibilityButtonText = restaurant.isHidden ? 'Make Visible' : 'Hide Restaurant';
+            const visibilityButtonClass = restaurant.isHidden ? 'btn-primary' : 'btn-danger';
+
             contentArea.innerHTML = `
                  <div class="mb-6">
                      <button data-action="back-to-restaurants" class="btn bg-white rounded-lg py-2 px-4 flex items-center gap-2 shadow-sm hover:shadow-md">
@@ -426,6 +441,11 @@
                              <h4 class="font-semibold">Account Status</h4>
                              <p>This account is currently <strong>${restaurant.isLocked ? 'Locked' : 'Active'}</strong>.</p>
                              <button data-action="toggle-lock" data-id="${restaurant.id}" class="btn ${lockButtonClass} text-sm mt-2 py-1 px-3">${lockButtonText}</button>
+                         </div>
+                         <div class="bg-purple-100 p-4 rounded-lg mt-4">
+                             <h4 class="font-semibold">Visibility Status</h4>
+                             <p>This restaurant is currently <strong>${restaurant.isHidden ? 'Hidden' : 'Visible'}</strong> to customers.</p>
+                             <button data-action="toggle-visibility" data-id="${restaurant.id}" class="btn ${visibilityButtonClass} text-sm mt-2 py-1 px-3">${visibilityButtonText}</button>
                          </div>
                      </div>
                  </div>
@@ -519,6 +539,7 @@
                     address: data.address,
                     ownerId: ownerUid,
                     isLocked: false,
+                    isHidden: false,
                     initialPassword: data.password,
                     imageUrls: data.imageUrls,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -679,6 +700,15 @@
             const currentStatus = doc.data().isLocked || false;
             await restaurantRef.update({ isLocked: !currentStatus });
             await logAudit(`Restaurant ${!currentStatus ? 'Locked' : 'Unlocked'}`, `ID: ${restaurantId}`);
+            renderAdminRestaurantDetailsView(restaurantId);
+        }
+
+        async function handleToggleVisibility(restaurantId) {
+            const restaurantRef = db.collection('restaurants').doc(restaurantId);
+            const doc = await restaurantRef.get();
+            const isCurrentlyHidden = doc.data().isHidden || false;
+            await restaurantRef.update({ isHidden: !isCurrentlyHidden });
+            await logAudit(`Restaurant visibility changed`, `ID: ${restaurantId}, New Status: ${!isCurrentlyHidden ? 'Hidden' : 'Visible'}`);
             renderAdminRestaurantDetailsView(restaurantId);
         }
 
