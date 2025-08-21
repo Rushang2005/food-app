@@ -2,13 +2,13 @@
 
 // --- FIREBASE INITIALIZATION ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAl16jGICR3WNOPMm_11SNsZ92YEowT-j8",
-  authDomain: "unifood-fb223.firebaseapp.com",
-  projectId: "unifood-fb223",
-  storageBucket: "unifood-fb223.appspot.com",
-  messagingSenderId: "307382508139",
-  appId: "1:307382508139:web:509ab3c0254321c40e2f2e",
-  measurementId: "G-J72XMB24GM"
+  apiKey: "AIzaSyDDJ9kFtxZMJnI86_Il9ONDTvA-4tjLfZY",
+  authDomain: "unifoods-18311.firebaseapp.com",
+  projectId: "unifoods-18311",
+  storageBucket: "unifoods-18311.firebasestorage.app",
+  messagingSenderId: "1026250402862",
+  appId: "1:1026250402862:web:a8a1526a162c682196c3bf",
+  measurementId: "G-3RYMPMMES6"
 };
 
 
