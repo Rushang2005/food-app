@@ -61,15 +61,12 @@ async function initializeApp() {
 
 // --- SUPER ADMIN PORTAL ---
 function initializeSuperAdminPortal() {
-    // This is the entry point for the superadmin interface after successful login.
-    // It sets up the main click handler and renders the initial dashboard view.
     activePortalHandler = handleSuperAdminClicks;
     mainContent.addEventListener('click', activePortalHandler);
     renderSuperAdminView('dashboard');
 }
 
 function handleSuperAdminClicks(e) {
-    // A single event handler to manage all clicks within the superadmin portal.
     const sidebarLink = e.target.closest('.sidebar-link');
     if (sidebarLink) {
         renderSuperAdminView(sidebarLink.dataset.view);
@@ -78,7 +75,6 @@ function handleSuperAdminClicks(e) {
 }
 
 function renderSuperAdminView(viewName) {
-    // This function acts as a router, rendering the correct view based on the sidebar link clicked.
     const nav = document.getElementById('superadmin-nav');
     if (nav) {
         nav.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
@@ -384,24 +380,40 @@ function handleRoleChange(selectElement, userId, originalRole) {
 }
 
 async function renderMaintenanceModeView(contentArea) {
-    const isEnabled = siteSettings.maintenanceMode || false;
+    const isSiteEnabled = siteSettings.maintenanceMode || false;
+    const isAdminEnabled = siteSettings.adminMaintenanceMode || false;
+
     contentArea.innerHTML = `
         <h2 class="text-3xl font-bold font-serif mb-6">Maintenance Mode</h2>
-        <div class="bg-white p-6 rounded-xl shadow-md">
+        <div class="bg-white p-6 rounded-xl shadow-md space-y-6">
             <form id="maintenance-mode-form">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="font-semibold">Site Maintenance</p>
-                        <p class="text-sm text-gray-600">Enabling this will make the site inaccessible to all users except superadmins.</p>
+                        <p class="text-sm text-gray-600">Enabling this makes the site inaccessible to all users except superadmins.</p>
                     </div>
-                    <button type="submit" class="btn ${isEnabled ? 'btn-danger' : 'btn-secondary'} w-48">
-                        ${isEnabled ? 'Disable Maintenance' : 'Enable Maintenance'}
+                    <button type="submit" class="btn ${isSiteEnabled ? 'btn-danger' : 'btn-secondary'} w-48">
+                        ${isSiteEnabled ? 'Disable Maintenance' : 'Enable Maintenance'}
                     </button>
                 </div>
             </form>
+            <div class="border-t pt-6">
+                 <form id="admin-maintenance-mode-form">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold">Admin Panel Maintenance</p>
+                            <p class="text-sm text-gray-600">Enabling this will block access for 'admin' users, but not 'superadmin' users.</p>
+                        </div>
+                        <button type="submit" class="btn ${isAdminEnabled ? 'btn-danger' : 'btn-secondary'} w-48">
+                            ${isAdminEnabled ? 'Disable' : 'Enable'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     `;
     document.getElementById('maintenance-mode-form').addEventListener('submit', handleToggleMaintenanceMode);
+    document.getElementById('admin-maintenance-mode-form').addEventListener('submit', handleToggleAdminMaintenanceMode);
 }
 
 async function handleToggleMaintenanceMode(e) {
@@ -416,6 +428,20 @@ async function handleToggleMaintenanceMode(e) {
         () => { renderMaintenanceModeView(document.getElementById('superadmin-main-content')); }
     );
 }
+
+async function handleToggleAdminMaintenanceMode(e) {
+    e.preventDefault();
+    const newStatus = !siteSettings.adminMaintenanceMode;
+    await db.collection('settings').doc('config').update({ adminMaintenanceMode: newStatus });
+    await logAudit(`Admin Maintenance Mode ${newStatus ? 'Enabled' : 'Disabled'}`, ``);
+    siteSettings.adminMaintenanceMode = newStatus;
+    showSimpleModal(
+        `Admin Maintenance ${newStatus ? 'Enabled' : 'Disabled'}`,
+        'The admin panel status has been updated.',
+        () => { renderMaintenanceModeView(document.getElementById('superadmin-main-content')); }
+    );
+}
+
 
 async function renderAuditLogView(contentArea) {
     contentArea.innerHTML = `<h2 class="text-3xl font-bold font-serif mb-6">Audit Log</h2><div id="audit-log-list">Loading...</div>`;
