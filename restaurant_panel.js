@@ -594,10 +594,8 @@ function cleanupListeners() {
 // --- INITIALIZE APP ON LOAD ---
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-// Corrected code for restaurant_panel.js
 const handleLogout = () => {
     auth.signOut().then(() => {
-        // This line now correctly redirects to the login page
         window.location.href = 'login.html';
     });
 };
