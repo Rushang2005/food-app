@@ -53,6 +53,7 @@ const translations = {
         yourOrder: "Your Order",
         placeOrder: "Place Order",
         close: "Close",
+        unavailable: "Unavailable"
     },
     gu: {
         maintenanceTitle: "જાળવણી હેઠળ",
@@ -92,6 +93,7 @@ const translations = {
         yourOrder: "તમારો ઓર્ડર",
         placeOrder: "ઓર્ડર આપો",
         close: "બંધ કરો",
+        unavailable: "અનુપલબ્ધ"
     },
     hi: {
         maintenanceTitle: "रखरखाव હેઠળ",
@@ -131,6 +133,7 @@ const translations = {
         yourOrder: "आपका ऑर्डर",
         placeOrder: "ऑर्डर दें",
         close: "बंद करें",
+        unavailable: "अनुपलब्ध"
     }
 };
 let currentLanguage = 'en';
@@ -142,7 +145,7 @@ let unsubscribeListeners = [];
 let activePortalHandler = null;
 let siteSettings = {};
 let cart = [];
-let html5QrCode = null; // For QR Code Scanner
+let html5QrCode = null;
 
 // --- UI REFERENCES ---
 const authContainer = document.getElementById('auth-container');
@@ -208,7 +211,6 @@ async function initializeApp() {
     }
     applySiteSettings();
 
-    // Language setup
     const savedLang = localStorage.getItem('unifood-lang') || 'en';
     setLanguage(savedLang);
 
@@ -303,7 +305,7 @@ function showView(view) {
         header.style.display = 'flex';
         appContainer.classList.add('fade-in');
     } else { 
-        appContainer.style.display = 'none'; // <-- This is the fix
+        appContainer.style.display = 'block';
         header.style.display = 'none';
         authContainer.style.display = 'flex';
         renderAuthForm('login');
@@ -378,7 +380,6 @@ function initializeCustomerPortal() {
     activePortalHandler = handleCustomerClicks;
     mainContent.addEventListener('click', activePortalHandler);
     
-    // Populate mobile nav and add listener
     const desktopNav = document.getElementById('customer-nav');
     const mobileNavContainer = document.getElementById('mobile-nav-links');
     if (desktopNav && mobileNavContainer) {
@@ -515,9 +516,15 @@ async function renderCustomerRestaurantView(restaurantId) {
     if(!menuSnapshot.empty) {
         menuHtml = menuSnapshot.docs.map(doc => {
             const item = doc.data();
+            // START: Check for availability
+            const isAvailable = item.isAvailable !== false; // Default to true if undefined
             const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
+            const buttonTextKey = isAvailable ? 'addToCart' : 'unavailable';
+            const buttonClass = isAvailable ? 'btn-secondary' : 'bg-gray-400 cursor-not-allowed';
+            // END: Check for availability
+            
             return `
-                <div class="flex items-start md:items-center justify-between p-4 border rounded-lg flex-col md:flex-row gap-4">
+                <div class="flex items-start md:items-center justify-between p-4 border rounded-lg flex-col md:flex-row gap-4 ${!isAvailable ? 'opacity-50' : ''}">
                      <div class="flex items-center w-full">
                         <img src="${itemImage}" class="w-20 h-20 object-cover rounded-md mr-4">
                         <div class="flex-grow">
@@ -526,7 +533,18 @@ async function renderCustomerRestaurantView(restaurantId) {
                             <p class="font-bold mt-1">₹${item.price}</p>
                         </div>
                      </div>
-                    <button data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${item.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="btn btn-secondary whitespace-nowrap w-full md:w-auto" data-translate-key="addToCart">Add to Cart</button>
+                    <button 
+                        data-action="add-to-cart" 
+                        data-item-id="${doc.id}" 
+                        data-item-name="${item.name}" 
+                        data-item-price="${item.price}" 
+                        data-restaurant-id="${restaurantId}" 
+                        data-restaurant-name="${restaurant.name}" 
+                        class="btn ${buttonClass} whitespace-nowrap w-full md:w-auto" 
+                        data-translate-key="${buttonTextKey}"
+                        ${!isAvailable ? 'disabled' : ''}>
+                        ${isAvailable ? 'Add to Cart' : 'Unavailable'}
+                    </button>
                 </div>`;
         }).join('');
     }
@@ -706,6 +724,19 @@ function renderCartView() {
                 <textarea id="delivery-address" name="deliveryAddress" class="input-field mt-1 block w-full" rows="3" required>${currentUser.address || ''}</textarea>
             </div>
             <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700">Payment Method</label>
+                <div class="mt-2 flex gap-x-6">
+                    <label class="flex items-center">
+                        <input type="radio" name="paymentType" value="cod" class="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" checked>
+                        <span class="ml-2 text-sm text-gray-700">Cash on Delivery</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="paymentType" value="online" class="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Online Payment</span>
+                    </label>
+                </div>
+            </div>
+            <div class="mt-6">
                 <button type="submit" data-action="place-order" class="btn btn-primary w-full py-3 rounded-lg" data-translate-key="placeOrder">Place Order</button>
                 <button type="button" class="btn bg-gray-200 w-full py-3 rounded-lg mt-2" onclick="closeModal()" data-translate-key="close">Close</button>
             </div>
@@ -721,6 +752,12 @@ async function handlePlaceOrder(form) {
         return;
     }
 
+    const paymentMethod = form.elements.paymentType.value;
+    if (!paymentMethod) {
+        showSimpleModal("Payment Method Required", "Please select a payment method.");
+        return;
+    }
+
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = (siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100);
     const gst = subtotal * (siteSettings.gstRate / 100);
@@ -732,7 +769,8 @@ async function handlePlaceOrder(form) {
         restaurantId: cart[0].restaurantId, restaurantName: cart[0].restaurantName,
         items: cart.map(item => ({...item})),
         subtotal, deliveryFee, platformFee, gst, gstRate: siteSettings.gstRate,
-        deliveryPayout: 30.00, totalPrice, status: 'placed', 
+        deliveryPayout: 30.00, totalPrice, status: 'placed',
+        paymentMethod: paymentMethod,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         deliveryBoyId: null, isReviewed: false
     };
