@@ -45,7 +45,7 @@ async function initializeApp() {
 
     auth.onAuthStateChanged(async (user) => {
         cleanupListeners();
-        if (activePortalHandler) mainContent.removeEventListener('click', activePortalHandler);
+        if (activePortalHandler) document.body.removeEventListener('click', activePortalHandler);
         
         if (user) {
             const userDoc = await db.collection('users').doc(user.uid).get();
@@ -97,11 +97,25 @@ function showView(view) {
     }
 }
 
-async function loadPortal(user) {
+function loadPortal(user) {
     mainContent.innerHTML = '';
     const template = document.getElementById(`${user.role}-portal-template`);
     if (template) {
         mainContent.appendChild(template.content.cloneNode(true));
+        
+        const desktopNav = document.getElementById('restaurant-nav');
+        const mobileNavContainer = document.getElementById('mobile-nav-container');
+        if(desktopNav && mobileNavContainer) {
+            const mobileNavClone = desktopNav.cloneNode(true);
+            mobileNavClone.id = 'mobile-sidebar-nav';
+            mobileNavClone.addEventListener('click', (e) => {
+                if(e.target.closest('.sidebar-link')) {
+                    closeMobileMenu();
+                }
+            });
+            mobileNavContainer.appendChild(mobileNavClone);
+        }
+        
         feather.replace();
         initializeRestaurantPortal();
     } else {
@@ -132,23 +146,25 @@ function handleLogin(e) {
 // --- RESTAURANT PORTAL ---
 function initializeRestaurantPortal() {
     activePortalHandler = handleRestaurantClicks;
-    mainContent.addEventListener('click', activePortalHandler);
-    document.getElementById('mobile-restaurant-nav')?.addEventListener('click', activePortalHandler);
+    document.body.addEventListener('click', activePortalHandler);
     renderRestaurantView('dashboard');
 }
 
 function handleRestaurantClicks(e) {
     const navLink = e.target.closest('[data-view]');
     if (navLink) {
+        e.preventDefault();
         renderRestaurantView(navLink.dataset.view);
         return;
     }
 
     const actionButton = e.target.closest('[data-action]');
     if(actionButton) {
+        e.preventDefault();
         const { action, orderId, itemId } = actionButton.dataset;
         switch(action) {
             case 'accept-order': acceptOrder(orderId); break;
+            case 'deny-order': denyOrder(orderId); break;
             case 'add-menu-item': showMenuItemForm(); break;
             case 'edit-menu-item': showMenuItemForm(itemId); break;
             case 'delete-menu-item': handleDeleteMenuItem(itemId); break;
@@ -158,10 +174,12 @@ function handleRestaurantClicks(e) {
 }
 
 function renderRestaurantView(viewName) {
-    document.querySelectorAll('#restaurant-nav .sidebar-link, #mobile-restaurant-nav .mobile-nav-link').forEach(link => {
+    document.querySelectorAll('.sidebar-link').forEach(link => {
         link.classList.toggle('active', link.dataset.view === viewName);
     });
     const contentArea = document.getElementById('restaurant-main-content');
+    if (!contentArea) return;
+    
     switch(viewName) {
         case 'dashboard': renderRestaurantDashboard(contentArea); break;
         case 'orders': renderRestaurantOrders(contentArea); break;
@@ -260,6 +278,11 @@ function loadOrdersByStatus(status) {
                 return { ...item, imageUrl: itemDoc.exists ? itemDoc.data().imageUrl : '' };
             }));
 
+            const actionButtons = order.status === 'placed' ? `
+                <button data-action="accept-order" data-order-id="${order.id}" class="btn btn-primary flex-1">Accept</button>
+                <button data-action="deny-order" data-order-id="${order.id}" class="btn btn-danger flex-1">Deny</button>
+            ` : '';
+
             return `
                 <div class="bg-gray-50 p-5 rounded-lg border">
                     <div class="flex flex-wrap justify-between items-start gap-2">
@@ -280,8 +303,8 @@ function loadOrdersByStatus(status) {
                         </div>
                     </div>
                     <div class="mt-4 flex gap-2">
-                        ${order.status === 'placed' ? `<button data-action="accept-order" data-order-id="${order.id}" class="btn btn-primary flex-1">Accept Order</button>` : ''}
-                        <button data-action="view-bill" data-order-id="${order.id}" class="btn bg-white border flex-1">Download Bill</button>
+                        ${actionButtons}
+                        <button data-action="view-bill" data-order-id="${order.id}" class="btn bg-white border flex-1">Bill</button>
                     </div>
                 </div>
             `;
@@ -293,8 +316,20 @@ function loadOrdersByStatus(status) {
 
 async function acceptOrder(orderId) {
     await db.collection('orders').doc(orderId).update({ status: 'accepted' });
-    showSimpleModal('Order Accepted', 'Order is now available for delivery partners.');
+    showSimpleModal('Order Accepted', 'The order is now in your "Preparing" tab and is available for delivery partners to pick up.');
 }
+
+async function denyOrder(orderId) {
+    showConfirmationModal(
+        'Deny Order?',
+        'Are you sure you want to deny this order? The customer will be notified that it was cancelled. This cannot be undone.',
+        async () => {
+            await db.collection('orders').doc(orderId).update({ status: 'cancelled' });
+            showSimpleModal('Order Denied', 'The order has been successfully cancelled.');
+        }
+    );
+}
+
 
 async function renderRestaurantMenu(contentArea) {
     contentArea.innerHTML = `
@@ -316,8 +351,15 @@ async function renderRestaurantMenu(contentArea) {
     unsubscribeListeners.push(unsub);
 }
 
+async function toggleItemAvailability(itemId, isAvailable) {
+    const itemRef = db.collection('restaurants').doc(currentUser.restaurantId).collection('menu').doc(itemId);
+    await itemRef.update({ isAvailable: isAvailable });
+}
+
+
 function renderMenuItemCard(doc) {
     const item = doc.data();
+    const isAvailable = item.isAvailable !== false;
     return `
         <div class="flex items-center justify-between p-4 border rounded-lg bg-white">
             <img src="${item.imageUrl || 'https://placehold.co/100x100?text=Food'}" class="w-20 h-20 object-cover rounded-md mr-4 hidden sm:block">
@@ -326,16 +368,25 @@ function renderMenuItemCard(doc) {
                 <p class="text-sm text-gray-600">${item.description || 'No description.'}</p>
                 <p class="font-bold mt-1">₹${item.price}</p>
             </div>
-            <div class="flex flex-col sm:flex-row gap-2">
-                <button data-action="edit-menu-item" data-item-id="${doc.id}" class="btn bg-gray-200 p-2"><i data-feather="edit-2" class="w-4 h-4"></i></button>
-                <button data-action="delete-menu-item" data-item-id="${doc.id}" class="btn bg-red-100 text-red-600 p-2"><i data-feather="trash" class="w-4 h-4"></i></button>
+            <div class="flex items-center flex-col sm:flex-row gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium ${isAvailable ? 'text-green-600' : 'text-gray-500'}">${isAvailable ? 'Available' : 'Unavailable'}</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" onchange="toggleItemAvailability('${doc.id}', this.checked)" class="sr-only peer" ${isAvailable ? 'checked' : ''}>
+                      <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+                <div class="flex gap-2">
+                    <button data-action="edit-menu-item" data-item-id="${doc.id}" class="btn bg-gray-200 p-2"><i data-feather="edit-2" class="w-4 h-4"></i></button>
+                    <button data-action="delete-menu-item" data-item-id="${doc.id}" class="btn bg-red-100 text-red-600 p-2"><i data-feather="trash" class="w-4 h-4"></i></button>
+                </div>
             </div>
         </div>`;
 }
 
 async function showMenuItemForm(itemId = null) {
     const isEditing = itemId !== null;
-    let item = { name: '', description: '', price: '', imageUrl: '' };
+    let item = { name: '', description: '', price: '', imageUrl: '', isAvailable: true };
     if (isEditing) {
         const itemDoc = await db.collection('restaurants').doc(currentUser.restaurantId).collection('menu').doc(itemId).get();
         if (itemDoc.exists) item = itemDoc.data();
@@ -363,6 +414,7 @@ async function showMenuItemForm(itemId = null) {
         if (isEditing) {
             await menuRef.doc(itemId).update(data);
         } else {
+            data.isAvailable = true;
             await menuRef.add(data);
         }
         closeModal();
@@ -544,7 +596,7 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 
 const handleLogout = () => {
     auth.signOut().then(() => {
-        window.location.href = 'login.html';
+        window.location.reload();
     });
 };
 
