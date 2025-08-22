@@ -118,7 +118,7 @@ const translations = {
         passwordPlaceholder: "पासवर्ड (न्यूनतम 6 अक्षर)",
         alreadyHaveAccount: "पहले से ही एक खाता है?",
         menu: "मेन्यू",
-        home: "होम",
+        home: "હોમ",
         myOrders: "मेरे आर्डर",
         profile: "प्रोफ़ाइल",
         findYourNextMeal: "अपना अगला भोजन खोजें",
@@ -133,7 +133,7 @@ const translations = {
         yourOrder: "आपका ऑर्डर",
         placeOrder: "ऑर्डर दें",
         close: "बंद करें",
-        unavailable: "अनुपलब्ध"
+        unavailable: "अनुपલબ્ધ"
     }
 };
 let currentLanguage = 'en';
@@ -146,6 +146,9 @@ let activePortalHandler = null;
 let siteSettings = {};
 let cart = [];
 let html5QrCode = null;
+let allRestaurantsCache = []; // Cache for search
+let allMenuItemsCache = []; // Cache for search
+
 
 // --- UI REFERENCES ---
 const authContainer = document.getElementById('auth-container');
@@ -160,6 +163,9 @@ const websiteLogoHeader = document.getElementById('website-logo-header');
 const announcementContainer = document.getElementById('announcement-banner-container');
 const cartButton = document.getElementById('cart-button');
 const cartCountEl = document.getElementById('cart-count');
+const globalSearchContainer = document.getElementById('global-search-container');
+const mobileSearchContainer = document.getElementById('mobile-search-container');
+const mobileSearchButton = document.getElementById('mobile-search-button');
 
 // Mobile Menu UI
 const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -283,7 +289,11 @@ function applySiteSettings() {
     }
     if (siteSettings.logoUrl) websiteLogoHeader.src = siteSettings.logoUrl;
     if (siteSettings.primaryColor) document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
-    if (siteSettings.secondaryColor) document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
+    if (siteSettings.secondaryColor) {
+        document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
+        const glowColor = siteSettings.secondaryColor.replace(')', ', 0.8)').replace('rgb', 'rgba');
+        document.documentElement.style.setProperty('--secondary-glow', glowColor);
+    }
     if (siteSettings.heroBgImage) authContainer.style.backgroundImage = `url('${siteSettings.heroBgImage}')`;
     
     announcementContainer.innerHTML = ''; 
@@ -298,6 +308,8 @@ function applySiteSettings() {
 function showView(view) {
     const header = document.querySelector('header');
     cartButton.classList.add('hidden');
+    mobileSearchContainer.classList.add('hidden');
+
 
     if (view === 'app') {
         authContainer.style.display = 'none';
@@ -380,6 +392,20 @@ function initializeCustomerPortal() {
     activePortalHandler = handleCustomerClicks;
     mainContent.addEventListener('click', activePortalHandler);
     
+    // Set up global search
+    const desktopSearch = document.getElementById('global-search-bar');
+    const mobileSearch = document.getElementById('mobile-global-search-bar');
+    desktopSearch.addEventListener('input', handleGlobalSearch);
+    mobileSearch.addEventListener('input', (e) => {
+        desktopSearch.value = e.target.value;
+        handleGlobalSearch(e);
+    });
+    
+    mobileSearchButton.addEventListener('click', () => {
+        mobileSearchContainer.classList.toggle('hidden');
+        feather.replace();
+    });
+
     const desktopNav = document.getElementById('customer-nav');
     const mobileNavContainer = document.getElementById('mobile-nav-links');
     if (desktopNav && mobileNavContainer) {
@@ -410,6 +436,15 @@ function handleCustomerClicks(e) {
     const restaurantCard = e.target.closest('.restaurant-card');
     if (restaurantCard) {
         renderCustomerRestaurantView(restaurantCard.dataset.id);
+        return;
+    }
+    
+    const cuisineCard = e.target.closest('[data-cuisine-filter]');
+    if (cuisineCard) {
+        const cuisine = cuisineCard.dataset.cuisineFilter;
+        const searchInput = document.getElementById('global-search-bar');
+        searchInput.value = cuisine;
+        searchInput.dispatchEvent(new Event('input'));
         return;
     }
 
@@ -444,50 +479,117 @@ function renderCustomerView(viewName) {
 
 async function renderCustomerHomepage(contentArea) {
      cartButton.classList.remove('hidden');
+     
+     const cuisines = [
+        { name: 'Pizza', icon: 'disc' }, { name: 'Burger', icon: 'minus-circle' },
+        { name: 'Indian', icon: 'sunrise' }, { name: 'Chinese', icon: 'wind' },
+        { name: 'Italian', icon: 'flag' }, { name: 'Mexican', icon: 'hash' }
+     ];
+     
+     const cuisineHtml = cuisines.map(c => `
+        <div data-cuisine-filter="${c.name}" class="text-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all cursor-pointer">
+            <i data-feather="${c.icon}" class="w-8 h-8 mx-auto text-gray-600"></i>
+            <p class="mt-2 font-semibold text-sm">${c.name}</p>
+        </div>
+     `).join('');
+     
      contentArea.innerHTML = `
-        <div class="space-y-8">
-            <div class="text-center p-6 md:p-8 bg-white rounded-xl shadow-md">
-                 <h2 class="text-3xl md:text-4xl font-bold font-serif" data-translate-key="findYourNextMeal">${siteSettings.heroTitle || 'Find Your Next Meal'}</h2>
-                 <p class="text-gray-600 mt-2" data-translate-key="heroSubtitle">${siteSettings.heroSubtitle || 'The best restaurants, delivered to your doorstep.'}</p>
-                 <div class="mt-6 max-w-lg mx-auto relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i data-feather="search" class="w-5 h-5 text-gray-400"></i></div>
-                    <input type="search" id="restaurant-search" class="input-field w-full p-3 pl-12 rounded-full" data-translate-key="searchPlaceholder" placeholder="Search for restaurants or cuisines...">
-                 </div>
+        <div id="homepage-content" class="space-y-12">
+            <div>
+                <h3 class="text-2xl font-bold font-serif mb-4">Categories</h3>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-4">${cuisineHtml}</div>
             </div>
-            <div id="ai-recommendations" class="mb-8">
-                <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="justForYou">Just For You ✨</h3>
-                <p class="text-gray-500" data-translate-key="aiRecommendationsPlaceholder">AI recommendations will appear here based on your order history.</p>
+            
+            <div id="featured-restaurants-container">
+                <h3 class="text-2xl font-bold font-serif mb-4">Top Rated Restaurants</h3>
+                <div id="featured-restaurants-list" class="flex overflow-x-auto gap-6 pb-4"></div>
             </div>
-            <div id="all-restaurants-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>`;
-    feather.replace();
-     const allListEl = document.getElementById('all-restaurants-list');
-     db.collection('restaurants').where("isLocked", "==", false).get().then(snapshot => {
-         if(snapshot.empty) {
-              allListEl.innerHTML = '<p>No restaurants available right now.</p>';
-              return;
-         }
-         allListEl.innerHTML = snapshot.docs.map(doc => renderRestaurantCard(doc)).join('');
-         feather.replace();
-     });
 
-     document.getElementById('restaurant-search').addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        document.querySelectorAll('#all-restaurants-list .restaurant-card').forEach(card => {
-            const name = card.dataset.name.toLowerCase();
-            const cuisine = card.dataset.cuisine.toLowerCase();
-            card.style.display = (name.includes(searchTerm) || cuisine.includes(searchTerm)) ? 'block' : 'none';
+            <div>
+                <h3 class="text-2xl font-bold font-serif mb-4">All Restaurants</h3>
+                <div id="all-restaurants-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
+        <div id="search-results-container" class="hidden"></div>`;
+
+     const allListEl = document.getElementById('all-restaurants-list');
+     const featuredListEl = document.getElementById('featured-restaurants-list');
+     
+    allRestaurantsCache = [];
+    allMenuItemsCache = [];
+
+    const snapshot = await db.collection('restaurants').where("isLocked", "==", false).get();
+    
+    if (snapshot.empty) {
+        allListEl.innerHTML = '<p>No restaurants available right now.</p>';
+        featuredListEl.innerHTML = '<p>No featured restaurants.</p>';
+        feather.replace();
+        return;
+    }
+    
+    const menuPromises = [];
+    snapshot.docs.forEach(doc => {
+        const restaurantData = { id: doc.id, ...doc.data() };
+        allRestaurantsCache.push(restaurantData);
+        
+        const menuPromise = db.collection('restaurants').doc(doc.id).collection('menu').get().then(menuSnapshot => {
+            menuSnapshot.forEach(menuDoc => {
+                allMenuItemsCache.push({
+                    ...menuDoc.data(),
+                    id: menuDoc.id,
+                    restaurantId: doc.id,
+                    restaurantName: restaurantData.name
+                });
+            });
         });
-     });
-     updateUIText();
+        menuPromises.push(menuPromise);
+    });
+
+    await Promise.all(menuPromises);
+    
+    const sortedRestaurants = [...allRestaurantsCache].sort((a, b) => (b.avgRating || 0) - (a.avgRating || 0));
+    const featuredRestaurants = sortedRestaurants.slice(0, 5);
+    
+    featuredListEl.innerHTML = featuredRestaurants.map(r => renderFeaturedRestaurantCard({ id: r.id, data: () => r })).join('');
+    allListEl.innerHTML = allRestaurantsCache.map(r => renderRestaurantCard({ id: r.id, data: () => r })).join('');
+    
+    feather.replace();
+    updateUIText();
 }
+
+function renderFeaturedRestaurantCard(doc) {
+    const r = doc.data();
+    const firstImage = r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls[0] : 'https://placehold.co/400x250?text=UniFood';
+    
+    return `
+        <div data-id="${doc.id}" data-name="${r.name}" data-cuisine="${r.cuisine}" class="restaurant-card group bg-white overflow-hidden cursor-pointer flex-shrink-0 w-80">
+            <div class="overflow-hidden">
+                <img src="${firstImage}" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300 ease-in-out">
+            </div>
+            <div class="p-4">
+                <h3 class="font-bold text-lg font-serif truncate">${r.name}</h3>
+                <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
+                <div class="flex items-center mt-2 text-xs text-gray-700">
+                   <i data-feather="star" class="w-4 h-4 fill-current text-yellow-500"></i>
+                   <span class="ml-1 font-bold">${(r.avgRating || 0).toFixed(1)}</span>
+                   <span class="mx-2">|</span>
+                   <span>30-40 min</span>
+                </div>
+            </div>
+        </div>`;
+}
+
 
 function renderRestaurantCard(doc) {
     const r = doc.data();
     const firstImage = r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls[0] : 'https://placehold.co/400x250?text=UniFood';
+    const cardClasses = 'restaurant-card group bg-white overflow-hidden cursor-pointer';
+
     return `
-        <div data-id="${doc.id}" data-name="${r.name}" data-cuisine="${r.cuisine}" class="restaurant-card bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer">
-            <img src="${firstImage}" class="w-full h-48 object-cover">
+        <div data-id="${doc.id}" data-name="${r.name}" data-cuisine="${r.cuisine}" class="${cardClasses}">
+            <div class="overflow-hidden">
+                <img src="${firstImage}" class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 ease-in-out">
+            </div>
             <div class="p-5">
                 <h3 class="font-bold text-xl font-serif">${r.name}</h3>
                 <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
@@ -500,6 +602,114 @@ function renderRestaurantCard(doc) {
             </div>
         </div>`;
 }
+
+// --- ADVANCED SEARCH LOGIC ---
+
+function handleGlobalSearch(e) {
+    const searchTerm = e.target.value.trim().toLowerCase();
+    const activeNav = document.querySelector('#customer-nav .sidebar-link.active');
+    
+    if (!activeNav) return;
+    const currentView = activeNav.dataset.view;
+
+    if (currentView === 'home') {
+        searchRestaurantsAndFood(searchTerm);
+    } else if (currentView === 'orders') {
+        searchOrders(searchTerm);
+    }
+}
+
+function searchOrders(searchTerm) {
+    const ordersList = document.getElementById('customer-orders-list');
+    if (!ordersList) return;
+
+    ordersList.querySelectorAll('.order-card').forEach(card => {
+        const orderId = card.dataset.orderId.toLowerCase();
+        const restaurantName = card.dataset.restaurantName.toLowerCase();
+        const itemNames = card.dataset.itemNames.toLowerCase();
+
+        if (orderId.includes(searchTerm) || restaurantName.includes(searchTerm) || itemNames.includes(searchTerm)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function searchRestaurantsAndFood(searchTerm) {
+    const homepageContent = document.getElementById('homepage-content');
+    const resultsContainer = document.getElementById('search-results-container');
+
+    if (!searchTerm) {
+        homepageContent.classList.remove('hidden');
+        resultsContainer.classList.add('hidden');
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    homepageContent.classList.add('hidden');
+    resultsContainer.classList.remove('hidden');
+
+    const priceRegex = /(.*?)\s*(?:under|<|less than)\s*(\d+)/;
+    const priceMatch = searchTerm.match(priceRegex);
+    let query = searchTerm;
+    let priceLimit = null;
+
+    if (priceMatch) {
+        query = priceMatch[1].trim();
+        priceLimit = parseFloat(priceMatch[2]);
+    }
+    
+    const matchingRestaurants = allRestaurantsCache.filter(r => 
+        r.name.toLowerCase().includes(query) || r.cuisine.toLowerCase().includes(query)
+    );
+
+    let matchingItems = allMenuItemsCache.filter(item => 
+        item.name.toLowerCase().includes(query)
+    );
+    if (priceLimit !== null) {
+        matchingItems = matchingItems.filter(item => item.price < priceLimit);
+    }
+    
+    let resultsHtml = '';
+    
+    if (matchingRestaurants.length > 0) {
+        resultsHtml += '<h3 class="text-2xl font-bold font-serif mb-4">Matching Restaurants</h3>';
+        resultsHtml += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+        resultsHtml += matchingRestaurants.map(r => renderRestaurantCard({ id: r.id, data: () => r })).join('');
+        resultsHtml += '</div>';
+    }
+
+    if (matchingItems.length > 0) {
+        resultsHtml += '<h3 class="text-2xl font-bold font-serif mt-8 mb-4">Matching Dishes</h3>';
+        resultsHtml += '<div class="space-y-4">';
+        resultsHtml += matchingItems.map(item => `
+            <div class="bg-white rounded-xl shadow-md p-4 flex items-center justify-between gap-4">
+                <div>
+                    <p class="font-semibold">${item.name}</p>
+                    <p class="text-sm text-gray-600">From: <a href="#" class="restaurant-link text-blue-600" data-id="${item.restaurantId}">${item.restaurantName}</a></p>
+                </div>
+                <p class="font-bold text-lg">₹${item.price}</p>
+            </div>
+        `).join('');
+        resultsHtml += '</div>';
+    }
+
+    if (resultsHtml === '') {
+        resultsHtml = '<p class="text-center text-gray-500 py-8">No results found.</p>';
+    }
+
+    resultsContainer.innerHTML = resultsHtml;
+    feather.replace();
+    
+    resultsContainer.querySelectorAll('.restaurant-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderCustomerRestaurantView(e.target.dataset.id);
+        });
+    });
+}
+
 
 async function renderCustomerRestaurantView(restaurantId) {
     const contentArea = document.getElementById('customer-main-content');
@@ -516,35 +726,34 @@ async function renderCustomerRestaurantView(restaurantId) {
     if(!menuSnapshot.empty) {
         menuHtml = menuSnapshot.docs.map(doc => {
             const item = doc.data();
-            // START: Check for availability
-            const isAvailable = item.isAvailable !== false; // Default to true if undefined
+            const isAvailable = item.isAvailable !== false;
             const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
             const buttonTextKey = isAvailable ? 'addToCart' : 'unavailable';
             const buttonClass = isAvailable ? 'btn-secondary' : 'bg-gray-400 cursor-not-allowed';
-            // END: Check for availability
-            
+            const translatedButtonText = translations[currentLanguage][buttonTextKey] || translations['en'][buttonTextKey];
+
             return `
-                <div class="flex items-start md:items-center justify-between p-4 border rounded-lg flex-col md:flex-row gap-4 ${!isAvailable ? 'opacity-50' : ''}">
-                     <div class="flex items-center w-full">
-                        <img src="${itemImage}" class="w-20 h-20 object-cover rounded-md mr-4">
-                        <div class="flex-grow">
-                            <p class="font-semibold">${item.name}</p>
-                            <p class="text-sm text-gray-600">${item.description}</p>
-                            <p class="font-bold mt-1">₹${item.price}</p>
-                        </div>
-                     </div>
-                    <button 
-                        data-action="add-to-cart" 
-                        data-item-id="${doc.id}" 
-                        data-item-name="${item.name}" 
-                        data-item-price="${item.price}" 
-                        data-restaurant-id="${restaurantId}" 
-                        data-restaurant-name="${restaurant.name}" 
-                        class="btn ${buttonClass} whitespace-nowrap w-full md:w-auto" 
-                        data-translate-key="${buttonTextKey}"
-                        ${!isAvailable ? 'disabled' : ''}>
-                        ${isAvailable ? 'Add to Cart' : 'Unavailable'}
-                    </button>
+                <div class="bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg flex flex-col md:flex-row items-center gap-4 p-4 ${!isAvailable ? 'opacity-60 bg-gray-50' : ''}">
+                    <img src="${itemImage}" class="w-full h-40 md:w-28 md:h-28 object-cover rounded-lg flex-shrink-0">
+                    <div class="flex-grow text-center md:text-left w-full">
+                        <p class="font-bold text-lg font-serif">${item.name}</p>
+                        <p class="text-sm text-gray-500 mt-1 mb-2">${item.description || 'Delicious item from this restaurant.'}</p>
+                        <p class="font-bold text-xl text-gray-800">₹${item.price}</p>
+                    </div>
+                    <div class="w-full md:w-auto flex-shrink-0">
+                        <button 
+                            data-action="add-to-cart" 
+                            data-item-id="${doc.id}" 
+                            data-item-name="${item.name}" 
+                            data-item-price="${item.price}" 
+                            data-restaurant-id="${restaurantId}" 
+                            data-restaurant-name="${restaurant.name}" 
+                            class="btn ${buttonClass} w-full md:w-auto py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2" 
+                            ${!isAvailable ? 'disabled' : ''}>
+                            <i data-feather="plus" class="w-5 h-5"></i>
+                            <span data-translate-key="${buttonTextKey}">${translatedButtonText}</span>
+                        </button>
+                    </div>
                 </div>`;
         }).join('');
     }
@@ -599,8 +808,13 @@ function renderCustomerOrderCard(orderId, orderData) {
         actionButtons += `<button data-action="rate-order" data-order-id="${orderId}" class="btn btn-secondary ml-2">Rate Order</button>`;
     }
 
+    const itemNames = orderData.items.map(i => i.name).join(' ');
+
     return `
-        <div class="bg-white p-5 rounded-xl shadow-md">
+        <div class="bg-white p-5 rounded-xl shadow-md order-card" 
+             data-order-id="${orderId}" 
+             data-restaurant-name="${orderData.restaurantName}" 
+             data-item-names="${itemNames}">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="font-bold text-lg">${orderData.restaurantName}</p>
