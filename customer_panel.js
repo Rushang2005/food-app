@@ -413,12 +413,31 @@ function initializeCustomerPortal() {
         mobileNavContainer.addEventListener('click', handleCustomerClicks);
     }
     
+    // *** FIX STARTS HERE ***
+    // Expanded this listener to handle all actions within modals.
     modalContainer.addEventListener('click', (e) => {
         const actionButton = e.target.closest('[data-action]');
-        if (actionButton && actionButton.dataset.action === 'remove-from-cart') {
-            removeFromCart(actionButton.dataset.itemId);
+        if (actionButton) {
+            const { action, itemId, itemName, itemPrice, restaurantId, restaurantName } = actionButton.dataset;
+            switch(action) {
+                case 'remove-from-cart':
+                    removeFromCart(itemId);
+                    break;
+                case 'add-to-cart':
+                    addToCart(itemId, itemName, parseFloat(itemPrice), restaurantId, restaurantName);
+                    // Optional: Give user feedback
+                    actionButton.innerHTML = 'Added!';
+                    setTimeout(() => {
+                        actionButton.innerHTML = `<i data-feather="plus" class="w-5 h-5"></i><span data-translate-key="addToCart">Add to Cart</span>`;
+                        feather.replace();
+                        updateUIText();
+                    }, 1000);
+                    break;
+            }
         }
     });
+    // *** FIX ENDS HERE ***
+
     cartButton.addEventListener('click', renderCartView);
     renderCustomerView('home');
 }
@@ -869,7 +888,7 @@ async function renderMenuItemDetailView(itemId, restaurantId) {
 
     const modalHtml = `
       <div class="relative">
-        <button onclick="closeModal()" class="absolute top-2 right-2 bg-white/70 backdrop-blur-sm rounded-full p-1 text-gray-800 hover:text-black z-10">
+        <button onclick="closeModal()" class="absolute top-2 right-2 bg-white/75 backdrop-blur-sm rounded-full p-1 text-gray-800 hover:text-black z-10">
             <i data-feather="x" class="w-6 h-6"></i>
         </button>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
