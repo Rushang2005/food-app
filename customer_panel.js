@@ -204,16 +204,12 @@ function setLanguage(lang) {
 
 
 // --- CORE APP & AUTH LOGIC ---
+// --- REPLACE THE ENTIRE initializeApp FUNCTION ---
 async function initializeApp() {
+    // 1. Fetch settings ONCE for the initial page load.
     const settingsDoc = await db.collection('settings').doc('config').get();
     if (settingsDoc.exists) {
         siteSettings = settingsDoc.data();
-    } else { 
-        siteSettings = {
-            deliveryCharge: 40, deliveryChargeType: 'fixed', gstRate: 5,
-            platformFee: 0, platformFeeType: 'fixed'
-        };
-        await db.collection('settings').doc('config').set(siteSettings);
     }
     applySiteSettings();
 
@@ -223,6 +219,7 @@ async function initializeApp() {
     document.getElementById('language-switcher').addEventListener('change', (e) => setLanguage(e.target.value));
     document.getElementById('mobile-language-switcher').addEventListener('change', (e) => setLanguage(e.target.value));
 
+    // 2. The onAuthStateChanged will now handle the real-time listener.
     auth.onAuthStateChanged(async (user) => {
         cleanupListeners();
         if (activePortalHandler) {
@@ -256,6 +253,17 @@ async function initializeApp() {
                 
                 showView('app');
                 loadPortal(currentUser);
+
+                // +++ 3. ADD THE REAL-TIME LISTENER HERE, AFTER THE PORTAL IS LOADED +++
+                const settingsListener = db.collection('settings').doc('config').onSnapshot(doc => {
+                    console.log("Customer Panel: Real-time settings received!"); // For debugging
+                    if (doc.exists) {
+                        siteSettings = doc.data();
+                        applySiteSettings(); // This now works on the correct UI
+                    }
+                });
+                unsubscribeListeners.push(settingsListener); // Add to cleanup queue
+
             } else {
                 showSimpleModal("Error", "Your user data could not be found. You have been logged out.");
                 if(auth.currentUser) auth.signOut();
@@ -283,17 +291,33 @@ function logAudit(action, details) {
 }
 
 function applySiteSettings() {
+    // Safely access the nested theme object
+    const theme = siteSettings.theme || {};
+    const globalTheme = theme.global || {};
+
     if (siteSettings.websiteName) {
         websiteNameHeader.textContent = siteSettings.websiteName;
         document.title = siteSettings.websiteName;
     }
     if (siteSettings.logoUrl) websiteLogoHeader.src = siteSettings.logoUrl;
-    if (siteSettings.primaryColor) document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
-    if (siteSettings.secondaryColor) {
-        document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
-        const glowColor = siteSettings.secondaryColor.replace(')', ', 0.8)').replace('rgb', 'rgba');
-        document.documentElement.style.setProperty('--secondary-glow', glowColor);
+    
+    // Read colors from the correct nested globalTheme object
+    document.documentElement.style.setProperty('--primary-color', globalTheme.primaryColor || '#1a202c');
+    document.documentElement.style.setProperty('--secondary-color', globalTheme.secondaryColor || '#D4AF37');
+    document.documentElement.style.setProperty('--background-color', globalTheme.backgroundColor || '#F8F9FA');
+    document.documentElement.style.setProperty('--text-color', globalTheme.textColor || '#1f2937');
+    document.documentElement.style.setProperty('--button-text-color', globalTheme.buttonTextColor || '#ffffff');
+    
+    // Gradient logic for header
+    if (globalTheme.useGradient) {
+        const gradient = `linear-gradient(to right, ${globalTheme.gradientStart || '#4c51bf'}, ${globalTheme.gradientEnd || '#6b46c1'})`;
+        document.documentElement.style.setProperty('--header-bg', gradient);
+        websiteNameHeader.classList.add('text-white');
+    } else {
+        document.documentElement.style.setProperty('--header-bg', '#ffffff');
+        websiteNameHeader.classList.remove('text-white');
     }
+
     if (siteSettings.heroBgImage) authContainer.style.backgroundImage = `url('${siteSettings.heroBgImage}')`;
     
     announcementContainer.innerHTML = ''; 
@@ -304,6 +328,7 @@ function applySiteSettings() {
         }
     });
 }
+
 
 function showView(view) {
     const header = document.querySelector('header');
@@ -723,6 +748,8 @@ function searchRestaurantsAndFood(searchTerm) {
 }
 
 
+// REPLACE the existing renderCustomerRestaurantView function in customer_panel.js with this one:
+
 async function renderCustomerRestaurantView(restaurantId) {
     const contentArea = document.getElementById('customer-main-content');
     contentArea.innerHTML = `<p>Loading restaurant...</p>`;
@@ -734,7 +761,6 @@ async function renderCustomerRestaurantView(restaurantId) {
     const restaurant = restaurantDoc.data();
     const menuSnapshot = await db.collection('restaurants').doc(restaurantId).collection('menu').get();
 
-    // *** MODIFIED: Logic to always show the call button ***
     let callButtonHtml = '';
     if (restaurant.mobile) {
         callButtonHtml = `
@@ -756,7 +782,6 @@ async function renderCustomerRestaurantView(restaurantId) {
             const itemImage = item.imageUrl || 'https://placehold.co/400x300?text=Food';
             const variants = item.variants && item.variants.length > 0 ? item.variants : [{ name: '', price: item.price }];
 
-            // --- UI for Mobile ---
             let mobilePricingHtml;
             if (variants.length > 1) {
                 mobilePricingHtml = `<div class="mt-2 text-sm text-center text-gray-700">Multiple options</div>`;
@@ -782,16 +807,19 @@ async function renderCustomerRestaurantView(restaurantId) {
                     </div>
                 </div>`;
 
-            // --- UI for Desktop (Original) ---
             let desktopPricingHtml;
             const desktopButtonClasses = "btn btn-secondary py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 w-full md:w-auto md:py-3 md:px-6";
             if (variants.length > 1) {
-                desktopPricingHtml = variants.map(v => `
+                desktopPricingHtml = variants.map(v => {
+                    const variantDisplayName = v.name ? ` (${v.name})` : '';
+                    const cartItemName = `${item.name}${variantDisplayName}`;
+                    return `
                     <div class="flex justify-between items-center py-2 border-t mt-2">
-                        <div><p class="font-semibold">${v.name}</p><p class="font-bold text-lg">₹${v.price}</p></div>
-                        <button data-action="add-to-cart" data-item-id="${doc.id}-${v.name}" data-item-name="${item.name} (${v.name})" data-item-price="${v.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="${desktopButtonClasses}" ${!isAvailable ? 'disabled' : ''}>
+                        <div><p class="font-semibold">${v.name || item.name}</p><p class="font-bold text-lg">₹${v.price}</p></div>
+                        <button data-action="add-to-cart" data-item-id="${doc.id}-${v.name}" data-item-name="${cartItemName}" data-item-price="${v.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="${desktopButtonClasses}" ${!isAvailable ? 'disabled' : ''}>
                             <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span data-translate-key="addToCart">Add to Cart</span></button>
-                    </div>`).join('');
+                    </div>`;
+                }).join('');
             } else {
                 desktopPricingHtml = `
                     <div class="flex items-center justify-between mt-2">
