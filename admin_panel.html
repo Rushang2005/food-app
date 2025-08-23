@@ -21,8 +21,7 @@
         :root {
             --primary-color: #1a202c;
             --secondary-color: #D4AF37;
-            /* --- NEW: Neon Glow Color --- */
-            --neon-glow-color: rgba(59, 130, 246, 0.8); /* Blue glow, you can change this */
+            --neon-glow-color: rgba(59, 130, 246, 0.8);
         }
         html, body { height: 100%; }
         body { 
@@ -61,7 +60,6 @@
         #mobile-menu-overlay { transition: opacity 0.3s ease-in-out; }
         .notification-badge { background-color: #E53935; color: white; border-radius: 50%; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; }
         
-        /* --- START: NEW NEON GLOW STYLES --- */
         @keyframes neon-glow-anim {
           from {
             box-shadow: 0 0 5px var(--neon-glow-color), 0 0 10px var(--neon-glow-color);
@@ -79,10 +77,20 @@
         }
         .restaurant-admin-card.neon-border:hover {
             transform: translateY(-5px) scale(1.02);
-            animation-play-state: paused; /* Pause animation for a stable, stronger glow on hover */
+            animation-play-state: paused;
         }
-        /* --- END: NEW NEON GLOW STYLES --- */
 
+        /* --- NEW: Toast Notification Styles --- */
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-enter { animation: slideInUp 0.5s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.5s ease-in forwards; }
     </style>
     <script src="admin_panel.js" defer></script>
 </head>
@@ -145,7 +153,7 @@
                     <input type="search" id="admin-global-search" class="input-field w-full p-3 pl-12 rounded-full shadow-sm" placeholder="Search anything in the current view...">
                 </div>
                 <div id="admin-content-area">
-                    </div>
+                </div>
             </main>
         </div>
     </template>
@@ -161,5 +169,7 @@
             <button onclick="document.getElementById('notification-popup').classList.add('hidden')" class="ml-4">&times;</button>
         </div>
     </div>
+    
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[9999] space-y-2"></div>
 </body>
 </html>
