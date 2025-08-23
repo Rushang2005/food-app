@@ -38,11 +38,14 @@ const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 
 // --- CORE APP & AUTH LOGIC ---
 
+
 async function initializeApp() {
+    
     const settingsDoc = await db.collection('settings').doc('config').get();
     if (settingsDoc.exists) siteSettings = settingsDoc.data();
     applySiteSettings();
 
+    
     auth.onAuthStateChanged(async (user) => {
         cleanupListeners();
         if (activePortalHandler) document.body.removeEventListener('click', activePortalHandler);
@@ -62,6 +65,17 @@ async function initializeApp() {
                 mobileUserInfo.innerHTML = userHtml;
                 showView('app');
                 loadPortal(currentUser);
+
+                
+                const settingsListener = db.collection('settings').doc('config').onSnapshot(doc => {
+                    console.log("Restaurant Panel: Real-time settings received!"); // For debugging
+                    if (doc.exists) {
+                        siteSettings = doc.data();
+                        applySiteSettings(); // This now works on the correct UI
+                    }
+                });
+                unsubscribeListeners.push(settingsListener); // Add to cleanup queue
+
             } else {
                 showSimpleModal("Access Denied", "You do not have permission to access this panel.", () => auth.signOut());
             }
@@ -73,13 +87,19 @@ async function initializeApp() {
 }
 
 function applySiteSettings() {
+    // Safely access the nested theme object
+    const theme = siteSettings.theme || {};
+    const globalTheme = theme.global || {};
+
     if (siteSettings.websiteName) {
         websiteNameHeader.textContent = siteSettings.websiteName;
         document.title = `${siteSettings.websiteName} - Restaurant Panel`;
     }
     if (siteSettings.logoUrl) websiteLogoHeader.src = siteSettings.logoUrl;
-    if (siteSettings.primaryColor) document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
-    if (siteSettings.secondaryColor) document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
+    
+    // Read colors from the correct nested globalTheme object
+    document.documentElement.style.setProperty('--primary-color', globalTheme.primaryColor || '#1a202c');
+    document.documentElement.style.setProperty('--secondary-color', globalTheme.secondaryColor || '#D4AF37');
 }
 
 function showView(view) {
@@ -400,6 +420,8 @@ async function toggleItemAvailability(itemId, isAvailable) {
 }
 
 
+// REPLACE the existing renderMenuItemCard function in restaurant_panel.js with this one:
+
 function renderMenuItemCard(doc) {
     const item = doc.data();
     const isAvailable = item.isAvailable !== false;
@@ -412,7 +434,10 @@ function renderMenuItemCard(doc) {
                 <p class="font-semibold">${item.name}</p>
                 <p class="text-sm text-gray-600">${item.description || 'No description.'}</p>
                 <div class="mt-1 text-sm">
-                    ${variants.map(v => `<span class="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs font-semibold mr-1 mb-1">${v.name || 'Price'}: ₹${v.price}</span>`).join('')}
+                    ${variants.map(v => {
+                        const displayName = v.name ? `${v.name}: ` : '';
+                        return `<span class="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs font-semibold mr-1 mb-1">${displayName}₹${v.price}</span>`;
+                    }).join('')}
                 </div>
             </div>
             <div class="flex items-center flex-col sm:flex-row gap-4">
