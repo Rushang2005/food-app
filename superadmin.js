@@ -87,7 +87,7 @@ function renderSuperAdminView(viewName) {
     switch(viewName) {
         case 'dashboard': renderPlatformDashboard(contentArea); break;
         case 'analytics': renderSuperAdminAnalytics(contentArea); break;
-        case 'website-settings': renderWebsiteSettingsView(contentArea); break;
+        case 'website-settings': renderThemeSettingsView(contentArea); break;
         case 'financial-settings': renderFinancialSettingsView(contentArea); break;
         case 'hero-content': renderHeroContentView(contentArea); break;
         case 'announcements': renderAnnouncementsView(contentArea); break;
@@ -124,10 +124,10 @@ async function renderPlatformDashboard(contentArea) {
      contentArea.innerHTML = `
         <h2 class="text-3xl font-bold font-serif mb-6">Platform Dashboard</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Revenue</h4><p class="text-3xl font-bold text-gray-800 mt-2">₹${totalRevenue.toFixed(2)}</p></div>
-            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Orders</h4><p class="text-3xl font-bold text-gray-800 mt-2">${ordersSnapshot.size}</p></div>
-            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Users</h4><p class="text-3xl font-bold text-gray-800 mt-2">${usersSnapshot.size}</p></div>
-            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Restaurants</h4><p class="text-3xl font-bold text-gray-800 mt-2">${restaurantsSnapshot.size}</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Revenue</h4><p class="text-3xl font-bold mt-2">₹${totalRevenue.toFixed(2)}</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Orders</h4><p class="text-3xl font-bold mt-2">${ordersSnapshot.size}</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Users</h4><p class="text-3xl font-bold mt-2">${usersSnapshot.size}</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><h4 class="text-lg font-semibold text-gray-500">Total Restaurants</h4><p class="text-3xl font-bold mt-2">${restaurantsSnapshot.size}</p></div>
         </div>
      `;
      feather.replace();
@@ -171,48 +171,110 @@ async function renderSuperAdminAnalytics(contentArea) {
     });
 }
 
-async function renderWebsiteSettingsView(contentArea) {
+async function renderThemeSettingsView(contentArea) {
+    const theme = siteSettings.theme || {};
+    const globalTheme = theme.global || {};
+
     contentArea.innerHTML = `
-        <h2 class="text-3xl font-bold font-serif mb-6">Website Settings</h2>
-        <div class="bg-white p-6 rounded-xl shadow-md">
-            <form id="website-settings-form" class="space-y-4">
-                <div>
-                    <label for="website-name" class="block text-sm font-medium text-gray-700">Website Name</label>
-                    <input type="text" id="website-name" name="websiteName" class="input-field mt-1 block w-full" value="${siteSettings.websiteName || ''}">
+        <h2 class="text-3xl font-bold font-serif mb-6">Theme & Branding</h2>
+        <form id="theme-settings-form" class="space-y-8">
+            
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-serif font-bold mb-4 border-b pb-2">Basic Branding</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="website-name" class="block text-sm font-medium text-gray-700">Website Name</label>
+                        <input type="text" id="website-name" name="websiteName" class="input-field mt-1 block w-full" value="${siteSettings.websiteName || ''}">
+                    </div>
+                    <div>
+                        <label for="website-logo" class="block text-sm font-medium text-gray-700">Logo URL</label>
+                        <input type="url" id="website-logo" name="logoUrl" class="input-field mt-1 block w-full" value="${siteSettings.logoUrl || ''}">
+                    </div>
                 </div>
-                <div>
-                    <label for="website-logo" class="block text-sm font-medium text-gray-700">Logo URL</label>
-                    <input type="url" id="website-logo" name="logoUrl" class="input-field mt-1 block w-full" value="${siteSettings.logoUrl || ''}">
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-serif font-bold mb-4 border-b pb-2">Color Palette</h3>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="primary-color" class="block text-sm font-medium text-gray-700">Primary Color</label>
+                        <input type="color" id="primary-color" name="primaryColor" class="input-field mt-1 h-12 block w-full" value="${globalTheme.primaryColor || '#1a202c'}">
+                    </div>
+                    <div>
+                        <label for="secondary-color" class="block text-sm font-medium text-gray-700">Secondary Color</label>
+                        <input type="color" id="secondary-color" name="secondaryColor" class="input-field mt-1 h-12 block w-full" value="${globalTheme.secondaryColor || '#D4AF37'}">
+                    </div>
                 </div>
-                 <div>
-                    <label for="primary-color" class="block text-sm font-medium text-gray-700">Primary Color</label>
-                    <input type="color" id="primary-color" name="primaryColor" class="input-field mt-1 block w-full" value="${siteSettings.primaryColor || '#1a202c'}">
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-serif font-bold mb-4 border-b pb-2">Gradient Background (for Header)</h3>
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" name="useGradient" class="h-5 w-5 rounded" ${globalTheme.useGradient ? 'checked' : ''}>
+                        <span class="font-medium">Enable Gradient Background</span>
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="gradient-start" class="block text-sm font-medium text-gray-700">Gradient Start</label>
+                            <input type="color" id="gradient-start" name="gradientStart" class="input-field mt-1 h-12 block w-full" value="${globalTheme.gradientStart || '#4c51bf'}">
+                        </div>
+                        <div>
+                            <label for="gradient-end" class="block text-sm font-medium text-gray-700">Gradient End</label>
+                            <input type="color" id="gradient-end" name="gradientEnd" class="input-field mt-1 h-12 block w-full" value="${globalTheme.gradientEnd || '#6b46c1'}">
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label for="secondary-color" class="block text-sm font-medium text-gray-700">Secondary Color</label>
-                    <input type="color" id="secondary-color" name="secondaryColor" class="input-field mt-1 block w-full" value="${siteSettings.secondaryColor || '#D4AF37'}">
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-serif font-bold mb-4 border-b pb-2">Advanced Color Settings</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="bg-color" class="block text-sm font-medium text-gray-700">Page Background</label>
+                        <input type="color" id="bg-color" name="backgroundColor" class="input-field mt-1 h-12 block w-full" value="${globalTheme.backgroundColor || '#F8F9FA'}">
+                    </div>
+                    <div>
+                        <label for="text-color" class="block text-sm font-medium text-gray-700">Primary Text</label>
+                        <input type="color" id="text-color" name="textColor" class="input-field mt-1 h-12 block w-full" value="${globalTheme.textColor || '#1f2937'}">
+                    </div>
+                    <div>
+                        <label for="btn-text-color" class="block text-sm font-medium text-gray-700">Button Text</label>
+                        <input type="color" id="btn-text-color" name="buttonTextColor" class="input-field mt-1 h-12 block w-full" value="${globalTheme.buttonTextColor || '#FFFFFF'}">
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-full py-3 rounded-lg">Save Settings</button>
-            </form>
-        </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full py-3 rounded-lg text-lg font-bold">Save All Settings</button>
+        </form>
     `;
-    document.getElementById('website-settings-form').addEventListener('submit', handleUpdateWebsiteSettings);
+    document.getElementById('theme-settings-form').addEventListener('submit', handleUpdateThemeSettings);
 }
 
-async function handleUpdateWebsiteSettings(e) {
+async function handleUpdateThemeSettings(e) {
     e.preventDefault();
     const form = e.target;
     const updatedSettings = {
         websiteName: form.elements.websiteName.value,
         logoUrl: form.elements.logoUrl.value,
-        primaryColor: form.elements.primaryColor.value,
-        secondaryColor: form.elements.secondaryColor.value,
+        theme: {
+            global: {
+                primaryColor: form.elements.primaryColor.value,
+                secondaryColor: form.elements.secondaryColor.value,
+                useGradient: form.elements.useGradient.checked,
+                gradientStart: form.elements.gradientStart.value,
+                gradientEnd: form.elements.gradientEnd.value,
+                backgroundColor: form.elements.backgroundColor.value,
+                textColor: form.elements.textColor.value,
+                buttonTextColor: form.elements.buttonTextColor.value,
+            }
+        }
     };
     await db.collection('settings').doc('config').set(updatedSettings, { merge: true });
-    await logAudit("Website Settings Updated", JSON.stringify(updatedSettings));
+    await logAudit("Theme & Branding Updated", JSON.stringify(updatedSettings));
     siteSettings = {...siteSettings, ...updatedSettings};
     applySiteSettings();
-    showSimpleModal('Success', 'Settings updated successfully!');
+    showSimpleModal('Success', 'Theme and branding settings updated successfully!');
 }
 
 async function renderHeroContentView(contentArea) {
@@ -380,48 +442,59 @@ function handleRoleChange(selectElement, userId, originalRole) {
 }
 
 async function renderMaintenanceModeView(contentArea) {
-    const isSiteEnabled = siteSettings.maintenanceMode || false;
-    const isAdminEnabled = siteSettings.adminMaintenanceMode || false;
+    const isMaintenanceEnabled = siteSettings.maintenanceMode || false;
+    const maintenanceMessage = siteSettings.maintenanceModeMessage || 'The site is currently down for maintenance. We will be back shortly!';
 
     contentArea.innerHTML = `
         <h2 class="text-3xl font-bold font-serif mb-6">Maintenance Mode</h2>
-        <div class="bg-white p-6 rounded-xl shadow-md space-y-6">
-            <form id="maintenance-mode-form">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <form id="maintenance-mode-form" class="space-y-4">
+                <div>
+                    <p class="font-semibold text-lg">Site Maintenance</p>
+                    <p class="text-sm text-gray-600 mb-4">Enabling this makes the site inaccessible to all users except superadmins.</p>
+                </div>
+                <div>
+                    <label for="maintenance-message" class="block text-sm font-medium text-gray-700">Custom Maintenance Message</label>
+                    <textarea id="maintenance-message" name="maintenanceMessage" class="input-field w-full mt-1" rows="4">${maintenanceMessage}</textarea>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-lg text-lg font-bold btn ${isMaintenanceEnabled ? 'btn-secondary' : 'btn-danger'}">
+                    ${isMaintenanceEnabled ? 'Disable Maintenance Mode' : 'Enable Maintenance Mode'}
+                </button>
+            </form>
+        </div>
+        
+        <div class="bg-white p-6 rounded-xl shadow-md mt-8">
+            <form id="admin-maintenance-mode-form">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="font-semibold">Site Maintenance</p>
-                        <p class="text-sm text-gray-600">Enabling this makes the site inaccessible to all users except superadmins.</p>
+                        <p class="font-semibold text-lg">Admin Panel Maintenance</p>
+                        <p class="text-sm text-gray-600">Blocks access for 'admin' users, but not 'superadmin' users.</p>
                     </div>
-                    <button type="submit" class="btn ${isSiteEnabled ? 'btn-danger' : 'btn-secondary'} w-48">
-                        ${isSiteEnabled ? 'Disable Maintenance' : 'Enable Maintenance'}
+                    <button type="submit" class="btn ${siteSettings.adminMaintenanceMode ? 'btn-danger' : 'btn-secondary'} w-48">
+                        ${siteSettings.adminMaintenanceMode ? 'Disable' : 'Enable'}
                     </button>
                 </div>
             </form>
-            <div class="border-t pt-6">
-                 <form id="admin-maintenance-mode-form">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="font-semibold">Admin Panel Maintenance</p>
-                            <p class="text-sm text-gray-600">Enabling this will block access for 'admin' users, but not 'superadmin' users.</p>
-                        </div>
-                        <button type="submit" class="btn ${isAdminEnabled ? 'btn-danger' : 'btn-secondary'} w-48">
-                            ${isAdminEnabled ? 'Disable' : 'Enable'}
-                        </button>
-                    </div>
-                </form>
-            </div>
         </div>
     `;
     document.getElementById('maintenance-mode-form').addEventListener('submit', handleToggleMaintenanceMode);
     document.getElementById('admin-maintenance-mode-form').addEventListener('submit', handleToggleAdminMaintenanceMode);
 }
 
+
 async function handleToggleMaintenanceMode(e) {
     e.preventDefault();
     const newStatus = !siteSettings.maintenanceMode;
-    await db.collection('settings').doc('config').update({ maintenanceMode: newStatus });
-    await logAudit(`Maintenance Mode ${newStatus ? 'Enabled' : 'Disabled'}`, ``);
+    const message = e.target.elements.maintenanceMessage.value;
+
+    await db.collection('settings').doc('config').update({ 
+        maintenanceMode: newStatus,
+        maintenanceModeMessage: message
+    });
+    await logAudit(`Maintenance Mode ${newStatus ? 'Enabled' : 'Disabled'}`, `Message: ${message}`);
     siteSettings.maintenanceMode = newStatus;
+    siteSettings.maintenanceModeMessage = message;
+
     showSimpleModal(
         `Maintenance Mode ${newStatus ? 'Enabled' : 'Disabled'}`,
         'The site status has been updated.',
@@ -621,7 +694,7 @@ async function renderPromotionsView(contentArea) {
             const discount = p.type === 'fixed' ? `₹${p.value}` : `${p.value}%`;
             return `<div class="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center">
                         <div>
-                            <p class="font-semibold text-lg font-mono text-gray-800">${p.code}</p>
+                            <p class="font-semibold text-lg font-mono">${p.code}</p>
                             <p class="text-sm text-gray-600">Discount: ${discount}</p>
                             <p class="text-xs font-semibold ${p.isActive ? 'text-green-600' : 'text-gray-500'}">${p.isActive ? 'ACTIVE' : 'INACTIVE'}</p>
                         </div>
@@ -1032,7 +1105,7 @@ function showSimpleModal(title, message, onOk) {
     const modalHtml = `
         <div class="text-center">
             <h3 class="text-2xl font-bold font-serif mb-2">${title}</h3>
-            <p class="text-gray-600 mb-6">${message}</p>
+            <p class="mb-6">${message}</p>
             <button id="simple-modal-ok" class="btn btn-primary rounded-lg py-2 px-12">OK</button>
         </div>
     `;
@@ -1047,7 +1120,7 @@ function showConfirmationModal(title, message, onConfirm, onCancel) {
     const modalHtml = `
         <div class="text-center">
             <h3 class="text-2xl font-bold font-serif mb-2">${title}</h3>
-            <p class="text-gray-600 mb-6">${message}</p>
+            <p class="mb-6">${message}</p>
             <div class="flex justify-center gap-4">
                 <button id="confirm-cancel" class="btn bg-gray-200 rounded-lg py-2 px-8">Cancel</button>
                 <button id="confirm-ok" class="btn btn-danger rounded-lg py-2 px-8">Confirm</button>
@@ -1077,6 +1150,7 @@ function cleanupListeners() {
 }
 
 function applySiteSettings() {
+    // Basic branding
     if (siteSettings.websiteName) {
         websiteNameHeader.textContent = siteSettings.websiteName + " Super Admin";
         document.title = siteSettings.websiteName + " - Super Admin";
@@ -1084,11 +1158,25 @@ function applySiteSettings() {
     if (siteSettings.logoUrl) {
         websiteLogoHeader.src = siteSettings.logoUrl;
     }
-    if (siteSettings.primaryColor) {
-        document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
-    }
-    if (siteSettings.secondaryColor) {
-        document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
+
+    // Advanced Theme Settings
+    const theme = siteSettings.theme || {};
+    const globalTheme = theme.global || {};
+
+    document.documentElement.style.setProperty('--primary-color', globalTheme.primaryColor || '#1a202c');
+    document.documentElement.style.setProperty('--secondary-color', globalTheme.secondaryColor || '#D4AF37');
+    document.documentElement.style.setProperty('--background-color', globalTheme.backgroundColor || '#F8F9FA');
+    document.documentElement.style.setProperty('--text-color', globalTheme.textColor || '#1f2937');
+    document.documentElement.style.setProperty('--button-text-color', globalTheme.buttonTextColor || '#ffffff');
+    
+    // Gradient logic for header
+    if (globalTheme.useGradient) {
+        const gradient = `linear-gradient(to right, ${globalTheme.gradientStart || '#4c51bf'}, ${globalTheme.gradientEnd || '#6b46c1'})`;
+        document.documentElement.style.setProperty('--header-bg', gradient);
+        websiteNameHeader.classList.add('text-white'); // Make header text readable on gradient
+    } else {
+        document.documentElement.style.setProperty('--header-bg', '#ffffff');
+        websiteNameHeader.classList.remove('text-white');
     }
 }
 
