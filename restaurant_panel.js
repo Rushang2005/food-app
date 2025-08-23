@@ -277,6 +277,24 @@ function loadOrdersByStatus(status) {
         }
         
         const ordersHtml = await Promise.all(orders.sort((a,b) => b.createdAt.seconds - a.createdAt.seconds).map(async order => {
+            // Fetch customer data to get phone number
+            let callButtonHtml = '';
+            if (order.customerId) {
+                const customerDoc = await db.collection('users').doc(order.customerId).get();
+                if (customerDoc.exists && customerDoc.data().mobile) {
+                    const customerMobile = customerDoc.data().mobile;
+                    callButtonHtml = `
+                        <a href="tel:${customerMobile}" title="Call ${order.customerName}" class="ml-2 p-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">
+                            <i data-feather="phone-call" class="w-4 h-4"></i>
+                        </a>`;
+                } else {
+                     callButtonHtml = `
+                        <span title="Customer phone number not available" class="ml-2 p-1 bg-gray-100 text-gray-400 rounded-full cursor-not-allowed">
+                            <i data-feather="phone-off" class="w-4 h-4"></i>
+                        </span>`;
+                }
+            }
+            
             const itemsWithImages = await Promise.all(order.items.map(async (item) => {
                 const itemDoc = await db.collection('restaurants').doc(order.restaurantId).collection('menu').doc(item.id.split('-')[0]).get();
                 return { ...item, imageUrl: itemDoc.exists ? itemDoc.data().imageUrl : '' };
@@ -301,7 +319,10 @@ function loadOrdersByStatus(status) {
                     <div class="flex flex-wrap justify-between items-start gap-2">
                         <div>
                             <p class="font-bold text-lg">Order #${order.id.substring(0,6)}</p>
-                            <p class="text-sm text-gray-500">From: ${order.customerName}</p>
+                            <p class="text-sm text-gray-500 flex items-center">
+                                From: ${order.customerName}
+                                ${callButtonHtml}
+                            </p>
                             <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full ${order.deliveryType === 'takeaway' ? 'text-purple-600 bg-purple-200' : 'text-blue-600 bg-blue-200'}">
                                 ${order.deliveryType === 'takeaway' ? 'Takeaway' : 'Delivery'}
                             </span>
@@ -326,6 +347,7 @@ function loadOrdersByStatus(status) {
             `;
         }));
         listEl.innerHTML = ordersHtml.join('');
+        feather.replace();
     });
     unsubscribeListeners.push(unsub);
 }
