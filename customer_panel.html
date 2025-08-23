@@ -24,17 +24,22 @@
         :root {
             --primary-color: #1a202c;
             --secondary-color: #D4AF37;
+            --background-color: #F8F9FA; /* New */
+            --text-color: #1f2937;       /* New */
+            --header-bg: #ffffff;        /* New */
+            --button-text-color: #ffffff;/* New */
             --secondary-glow: rgba(234, 193, 77, 0.8);
             --secondary-glow-soft: rgba(234, 193, 77, 0.5);
         }
         html, body { height: 100%; }
         body { 
             font-family: 'Manrope', sans-serif; 
-            background-color: #F8F9FA;
-            background-image: linear-gradient(to bottom right, #F8F9FA, #eef2f5);
+            background-color: var(--background-color); /* Updated */
+            color: var(--text-color); /* Updated */
             display: flex;
             flex-direction: column;
         }
+        header { background: var(--header-bg); } /* Updated */
         #app-container {
             flex: 1 0 auto;
             display: flex;
@@ -76,12 +81,12 @@
             transform: translateY(-3px); 
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
         }
-        .btn-primary { background-color: var(--primary-color); color: #ffffff; }
+        .btn-primary { background-color: var(--primary-color); color: var(--button-text-color); } /* Updated */
         .btn-secondary { 
             background-color: var(--secondary-color);
             background-image: linear-gradient(to right, #D4AF37 0%, #EAC14D 51%, #D4AF37 100%);
             background-size: 200% auto;
-            color: #ffffff; 
+            color: var(--button-text-color); /* Updated */
             box-shadow: 0 4px 15px 0 rgba(212, 175, 55, 0.3);
         }
         .btn-secondary:hover {
@@ -102,7 +107,7 @@
         
         .sidebar-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; transition: all 0.2s ease; font-weight: 500; color: #4A5568; }
         .sidebar-link:hover { background-color: #EDF2F7; color: #1A202C; transform: translateX(4px); }
-        .sidebar-link.active { background-color: var(--primary-color); color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .sidebar-link.active { background-color: var(--primary-color); color: var(--button-text-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); } /* Updated */
 
         .restaurant-card {
             clip-path: polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%);
