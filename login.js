@@ -89,7 +89,35 @@ function renderAuthForm(formType) {
         // --- END OF NEW LOGIC ---
     }
     // Apply settings after form is rendered
-    applySiteSettings();
+    
+}function applySiteSettings() {
+    // Safely access the nested theme object
+    const theme = siteSettings.theme || {};
+    const globalTheme = theme.global || {};
+
+    const logoEl = document.getElementById('website-logo-header');
+    const nameEl = document.getElementById('website-name-header');
+    const logoElSignup = document.getElementById('website-logo-header-signup');
+    const nameElSignup = document.getElementById('website-name-header-signup');
+    const authContainerBg = document.getElementById('auth-container');
+
+    if (siteSettings.websiteName) {
+        if (nameEl) nameEl.textContent = siteSettings.websiteName;
+        if (nameElSignup) nameElSignup.textContent = siteSettings.websiteName;
+        document.title = siteSettings.websiteName + " - Login";
+    }
+    if (siteSettings.logoUrl) {
+        if (logoEl) logoEl.src = siteSettings.logoUrl;
+        if (logoElSignup) logoElSignup.src = siteSettings.logoUrl;
+    }
+
+    // Read colors from the correct nested globalTheme object
+    document.documentElement.style.setProperty('--primary-color', globalTheme.primaryColor || '#1a202c');
+    document.documentElement.style.setProperty('--secondary-color', globalTheme.secondaryColor || '#D4AF37');
+    
+    if (siteSettings.heroBgImage) {
+        authContainerBg.style.backgroundImage = `url('${siteSettings.heroBgImage}')`;
+    }
 }
 
 async function handleLogin(e) {
@@ -172,7 +200,7 @@ async function redirectUser(userId) {
             case 'customer':
             default:
                  // Assuming you have a customer.html
-                window.location.href = 'customer_panel.html';
+                window.location.href = 'customer_Panel.html';
                 break;
         }
     } else {
