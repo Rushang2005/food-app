@@ -161,7 +161,7 @@ function handleRestaurantClicks(e) {
     const actionButton = e.target.closest('[data-action]');
     if(actionButton) {
         e.preventDefault();
-        const { action, orderId, itemId } = actionButton.dataset;
+        const { action, orderId, itemId, newStatus } = actionButton.dataset;
         switch(action) {
             case 'accept-order': acceptOrder(orderId); break;
             case 'deny-order': denyOrder(orderId); break;
@@ -169,6 +169,7 @@ function handleRestaurantClicks(e) {
             case 'edit-menu-item': showMenuItemForm(itemId); break;
             case 'delete-menu-item': handleDeleteMenuItem(itemId); break;
             case 'view-bill': renderOrderBill(orderId); break;
+            case 'change-status': changeOrderStatus(orderId, newStatus); break;
         }
     }
 }
@@ -218,6 +219,7 @@ async function renderRestaurantOrders(contentArea) {
                 <nav id="order-tabs" class="flex -mb-px space-x-6">
                     <button data-status="new" class="order-tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">New Orders</button>
                     <button data-status="preparing" class="order-tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">Preparing</button>
+                    <button data-status="ready" class="order-tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">Ready for Pickup</button>
                     <button data-status="history" class="order-tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">Order History</button>
                 </nav>
             </div>
@@ -251,8 +253,10 @@ function loadOrdersByStatus(status) {
         query = db.collection('orders').where('restaurantId', '==', restaurantId).where('status', '==', 'placed');
     } else if (status === 'preparing') {
         query = db.collection('orders').where('restaurantId', '==', restaurantId).where('status', '==', 'accepted');
+    } else if (status === 'ready') {
+        query = db.collection('orders').where('restaurantId', '==', restaurantId).where('status', '==', 'ready-for-pickup');
     } else { // history
-        query = db.collection('orders').where('restaurantId', '==', restaurantId).where('status', 'in', ['delivered', 'cancelled']);
+        query = db.collection('orders').where('restaurantId', '==', restaurantId).where('status', 'in', ['delivered', 'cancelled', 'completed']);
     }
 
     const unsub = query.onSnapshot(async snapshot => {
@@ -274,14 +278,23 @@ function loadOrdersByStatus(status) {
         
         const ordersHtml = await Promise.all(orders.sort((a,b) => b.createdAt.seconds - a.createdAt.seconds).map(async order => {
             const itemsWithImages = await Promise.all(order.items.map(async (item) => {
-                const itemDoc = await db.collection('restaurants').doc(order.restaurantId).collection('menu').doc(item.id).get();
+                const itemDoc = await db.collection('restaurants').doc(order.restaurantId).collection('menu').doc(item.id.split('-')[0]).get();
                 return { ...item, imageUrl: itemDoc.exists ? itemDoc.data().imageUrl : '' };
             }));
 
-            const actionButtons = order.status === 'placed' ? `
-                <button data-action="accept-order" data-order-id="${order.id}" class="btn btn-primary flex-1">Accept</button>
-                <button data-action="deny-order" data-order-id="${order.id}" class="btn btn-danger flex-1">Deny</button>
-            ` : '';
+            let actionButtons = '';
+            if (order.status === 'placed') {
+                actionButtons = `
+                    <button data-action="accept-order" data-order-id="${order.id}" class="btn btn-primary flex-1">Accept</button>
+                    <button data-action="deny-order" data-order-id="${order.id}" class="btn bg-gray-200 flex-1">Deny</button>
+                `;
+            } else if (order.deliveryType === 'takeaway') {
+                if (order.status === 'accepted') {
+                    actionButtons = `<button data-action="change-status" data-order-id="${order.id}" data-new-status="ready-for-pickup" class="btn btn-secondary flex-1">Mark as Ready for Pickup</button>`;
+                } else if (order.status === 'ready-for-pickup') {
+                    actionButtons = `<button data-action="change-status" data-order-id="${order.id}" data-new-status="completed" class="btn btn-primary flex-1">Mark as Completed</button>`;
+                }
+            }
 
             return `
                 <div class="bg-gray-50 p-5 rounded-lg border">
@@ -289,6 +302,9 @@ function loadOrdersByStatus(status) {
                         <div>
                             <p class="font-bold text-lg">Order #${order.id.substring(0,6)}</p>
                             <p class="text-sm text-gray-500">From: ${order.customerName}</p>
+                            <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full ${order.deliveryType === 'takeaway' ? 'text-purple-600 bg-purple-200' : 'text-blue-600 bg-blue-200'}">
+                                ${order.deliveryType === 'takeaway' ? 'Takeaway' : 'Delivery'}
+                            </span>
                         </div>
                         <p class="font-bold text-lg">₹${order.totalPrice.toFixed(2)}</p>
                     </div>
@@ -304,7 +320,7 @@ function loadOrdersByStatus(status) {
                     </div>
                     <div class="mt-4 flex gap-2">
                         ${actionButtons}
-                        <button data-action="view-bill" data-order-id="${order.id}" class="btn bg-white border flex-1">Bill</button>
+                        <button data-action="view-bill" data-order-id="${order.id}" class="btn bg-white border flex-1 py-3">Bill</button>
                     </div>
                 </div>
             `;
@@ -314,9 +330,14 @@ function loadOrdersByStatus(status) {
     unsubscribeListeners.push(unsub);
 }
 
+async function changeOrderStatus(orderId, newStatus) {
+    await db.collection('orders').doc(orderId).update({ status: newStatus });
+    showSimpleModal('Status Updated', `The order status has been changed to ${newStatus}.`);
+}
+
 async function acceptOrder(orderId) {
     await db.collection('orders').doc(orderId).update({ status: 'accepted' });
-    showSimpleModal('Order Accepted', 'The order is now in your "Preparing" tab and is available for delivery partners to pick up.');
+    showSimpleModal('Order Accepted', 'The order is now in the "Preparing" tab.');
 }
 
 async function denyOrder(orderId) {
@@ -360,13 +381,17 @@ async function toggleItemAvailability(itemId, isAvailable) {
 function renderMenuItemCard(doc) {
     const item = doc.data();
     const isAvailable = item.isAvailable !== false;
+    const variants = item.variants && item.variants.length > 0 ? item.variants : [{ name: '', price: item.price }];
+    
     return `
         <div class="flex items-center justify-between p-4 border rounded-lg bg-white">
-            <img src="${item.imageUrl || 'https://placehold.co/100x100?text=Food'}" class="w-20 h-20 object-cover rounded-md mr-4 hidden sm:block">
+            <img src="${item.imageUrl || 'https://placehold.co/100x100?text=Food'}" class="w-20 h-20 object-cover rounded-md mr-4 flex-shrink-0">
             <div class="flex-grow">
                 <p class="font-semibold">${item.name}</p>
                 <p class="text-sm text-gray-600">${item.description || 'No description.'}</p>
-                <p class="font-bold mt-1">₹${item.price}</p>
+                <div class="mt-1 text-sm">
+                    ${variants.map(v => `<span class="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs font-semibold mr-1 mb-1">${v.name || 'Price'}: ₹${v.price}</span>`).join('')}
+                </div>
             </div>
             <div class="flex items-center flex-col sm:flex-row gap-4">
                 <div class="flex items-center gap-2">
@@ -386,33 +411,99 @@ function renderMenuItemCard(doc) {
 
 async function showMenuItemForm(itemId = null) {
     const isEditing = itemId !== null;
-    let item = { name: '', description: '', price: '', imageUrl: '', isAvailable: true };
+    let item = { name: '', description: '', imageUrl: '', variants: [{ name: '', price: '' }] };
     if (isEditing) {
         const itemDoc = await db.collection('restaurants').doc(currentUser.restaurantId).collection('menu').doc(itemId).get();
-        if (itemDoc.exists) item = itemDoc.data();
+        if (itemDoc.exists) {
+            const data = itemDoc.data();
+            item = { ...data, variants: data.variants && data.variants.length > 0 ? data.variants : [{ name: '', price: data.price || '' }] };
+        }
     }
-    showModal(`
+
+    const formHtml = `
         <form id="menu-item-form" class="space-y-4">
-            <h3 class="text-2xl font-bold font-serif">${isEditing ? 'Edit' : 'Add'} Menu Item</h3>
-            <input type="text" name="name" class="input-field w-full" placeholder="Item Name" value="${item.name}" required>
-            <textarea name="description" class="input-field w-full" rows="3" placeholder="Description">${item.description}</textarea>
-            <input type="number" name="price" class="input-field w-full" placeholder="Price (₹)" value="${item.price}" required step="0.01">
-            <input type="url" name="imageUrl" class="input-field w-full" placeholder="Image URL" value="${item.imageUrl}">
-            <div class="flex justify-end gap-4"><button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
-        </form>`);
-    
+            <h3 class="text-2xl font-bold font-serif mb-4">${isEditing ? 'Edit Menu Item' : 'Add New Menu Item'}</h3>
+            <input type="hidden" name="itemId" value="${itemId || ''}">
+            <input type="text" name="name" class="input-field w-full" placeholder="Item Name (e.g., Biryani)" value="${item.name}" required>
+            <textarea name="description" class="input-field w-full" rows="2" placeholder="Description">${item.description || ''}</textarea>
+            <input type="url" name="imageUrl" class="input-field w-full" placeholder="Image URL" value="${item.imageUrl || ''}">
+            
+            <div class="border-t pt-4 mt-4">
+                <h4 class="font-semibold mb-2">Pricing Variants</h4>
+                <div id="variants-container" class="space-y-2">
+                    ${item.variants.map((v, index) => `
+                        <div class="variant-row flex items-center gap-2">
+                            <input type="text" class="input-field flex-grow" placeholder="Variant Name (e.g., Half)" value="${v.name || ''}" required>
+                            <input type="number" class="input-field w-28" placeholder="Price" value="${v.price || ''}" step="0.01" required>
+                            <button type="button" class="btn btn-danger p-2 remove-variant-btn" ${index === 0 ? 'disabled' : ''}>&times;</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button type="button" id="add-variant-btn" class="btn btn-secondary text-sm mt-2 py-1 px-3">Add Variant</button>
+            </div>
+
+            <div class="flex justify-end gap-4 pt-4"><button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary">Save Item</button></div>
+        </form>
+    `;
+    showModal(formHtml);
+
+    const variantsContainer = document.getElementById('variants-container');
+    const addVariantBtn = document.getElementById('add-variant-btn');
+
+    const addVariantRow = () => {
+        const row = document.createElement('div');
+        row.className = 'variant-row flex items-center gap-2';
+        row.innerHTML = `
+            <input type="text" class="input-field flex-grow" placeholder="Variant Name (e.g., Full)" required>
+            <input type="number" class="input-field w-28" placeholder="Price" step="0.01" required>
+            <button type="button" class="btn btn-danger p-2 remove-variant-btn">&times;</button>
+        `;
+        variantsContainer.appendChild(row);
+    };
+
+    addVariantBtn.addEventListener('click', addVariantRow);
+    variantsContainer.addEventListener('click', e => {
+        if (e.target.classList.contains('remove-variant-btn')) {
+            e.target.closest('.variant-row').remove();
+        }
+    });
+
     document.getElementById('menu-item-form').addEventListener('submit', async e => {
         e.preventDefault();
         const form = e.target;
+        
+        const variants = [];
+        let validationPassed = true;
+        form.querySelectorAll('.variant-row').forEach(row => {
+            const nameInput = row.children[0];
+            const priceInput = row.children[1];
+            if(!nameInput.value.trim() || !priceInput.value){
+                validationPassed = false;
+            }
+            variants.push({
+                name: nameInput.value.trim(),
+                price: parseFloat(priceInput.value)
+            });
+        });
+
+        if(!validationPassed){
+            showSimpleModal("Error", "Please fill out all variant name and price fields.");
+            return;
+        }
+
         const data = {
             name: form.elements.name.value,
             description: form.elements.description.value,
-            price: parseFloat(form.elements.price.value),
             imageUrl: form.elements.imageUrl.value,
+            variants: variants,
+            price: variants[0] ? variants[0].price : 0, 
         };
+
+        const itmId = form.elements.itemId.value;
         const menuRef = db.collection('restaurants').doc(currentUser.restaurantId).collection('menu');
-        if (isEditing) {
-            await menuRef.doc(itemId).update(data);
+
+        if (itmId) {
+            await menuRef.doc(itmId).update(data);
         } else {
             data.isAvailable = true;
             await menuRef.add(data);
@@ -420,6 +511,7 @@ async function showMenuItemForm(itemId = null) {
         closeModal();
     });
 }
+
 
 function handleDeleteMenuItem(itemId) {
     showConfirmationModal("Delete Item?", "Are you sure? This cannot be undone.", async () => {
@@ -438,7 +530,16 @@ async function renderRestaurantProfile(contentArea) {
                 <input type="text" name="cuisine" class="input-field w-full" value="${restaurant.cuisine}" required>
                 <textarea name="address" class="input-field w-full" rows="3" required>${restaurant.address}</textarea>
                 <textarea name="imageUrls" class="input-field w-full" rows="3" placeholder="Image URLs, one per line">${(restaurant.imageUrls || []).join('\n')}</textarea>
-                <div class="flex gap-4"><button type="submit" class="btn btn-primary">Save Changes</button><button type="button" id="change-password-btn" class="btn btn-secondary">Change Password</button></div>
+                
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <label for="supports-delivery" class="font-medium text-gray-700">Enable Delivery Service</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="supports-delivery" name="supportsDelivery" class="sr-only peer" ${restaurant.supportsDelivery !== false ? 'checked' : ''}>
+                      <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex gap-4 pt-2"><button type="submit" class="btn btn-primary">Save Changes</button><button type="button" id="change-password-btn" class="btn btn-secondary">Change Password</button></div>
             </form>
         </div>`;
     document.getElementById('restaurant-profile-form').addEventListener('submit', async (e) => {
@@ -449,6 +550,7 @@ async function renderRestaurantProfile(contentArea) {
             cuisine: form.elements.cuisine.value,
             address: form.elements.address.value,
             imageUrls: form.elements.imageUrls.value.split('\n').filter(url => url.trim() !== ''),
+            supportsDelivery: form.elements.supportsDelivery.checked,
         };
         await db.collection('restaurants').doc(currentUser.restaurantId).update(updatedData);
         showSimpleModal("Success", "Profile updated successfully!");
@@ -490,7 +592,7 @@ async function renderOrderBill(orderId) {
     const customer = customerDoc.data();
 
     const itemsWithImages = await Promise.all(order.items.map(async (item) => {
-        const itemDoc = await db.collection('restaurants').doc(order.restaurantId).collection('menu').doc(item.id).get();
+        const itemDoc = await db.collection('restaurants').doc(order.restaurantId).collection('menu').doc(item.id.split('-')[0]).get();
         return { ...item, imageUrl: itemDoc.exists ? itemDoc.data().imageUrl : '' };
     }));
     
@@ -515,6 +617,8 @@ async function renderOrderBill(orderId) {
                 <p>${order.deliveryAddress}</p>
                 <p>Email: ${customer.email}</p>
                 <p>Mobile: ${customer.mobile || 'N/A'}</p>
+                <p class="mt-2"><strong>Payment Method:</strong> <span class="capitalize">${order.paymentMethod || 'N/A'}</span></p>
+                <p><strong>Service Type:</strong> <span class="capitalize">${order.deliveryType || 'Delivery'}</span></p>
             </div>
             <table class="w-full text-sm my-6">
                 <thead class="border-b bg-gray-50"><tr><th class="text-left p-2">Item</th><th class="text-center p-2">Qty</th><th class="text-right p-2">Price</th><th class="text-right p-2">Total</th></tr></thead>
