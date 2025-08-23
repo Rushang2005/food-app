@@ -186,7 +186,6 @@ function handleAdminGlobalSearch(e) {
 
     if (!activeView) return;
 
-    // Use a debounce function to prevent firing on every keystroke for better performance
     clearTimeout(handleAdminGlobalSearch.timeout);
     handleAdminGlobalSearch.timeout = setTimeout(() => {
         switch (activeView) {
@@ -203,7 +202,7 @@ function handleAdminGlobalSearch(e) {
                 renderDeliveryBoysView(document.getElementById('admin-content-area'), searchTerm);
                 break;
         }
-    }, 300); // 300ms delay
+    }, 300);
 }
 
 function listenForCancellationRequests() {
@@ -243,7 +242,7 @@ function handleAdminClicks(e) {
         if (sidebarLink.dataset.view !== 'scan-order') {
             stopScanner();
         }
-        document.getElementById('admin-global-search').value = ''; // Clear search on view change
+        document.getElementById('admin-global-search').value = '';
         renderAdminView(sidebarLink.dataset.view);
         return;
     }
@@ -373,7 +372,7 @@ async function handleCancellationRequest(requestId, decision) {
     const requestRef = db.collection('cancellationRequests').doc(requestId);
     const requestDoc = await requestRef.get();
     if (!requestDoc.exists) {
-        showSimpleModal("Error", "Request not found.");
+        showToast("Request not found.", "error");
         return;
     }
     const requestData = requestDoc.data();
@@ -387,14 +386,14 @@ async function handleCancellationRequest(requestId, decision) {
         });
         await requestRef.update({ status: 'approved' });
         await logAudit("Cancellation Approved", `Request ID: ${requestId}`);
-        showSimpleModal("Success", "Cancellation approved. The order is now available for other delivery partners.");
+        showToast("Cancellation approved.");
     } else { 
         await orderRef.update({
             status: requestData.previousStatus 
         });
         await requestRef.update({ status: 'denied' });
         await logAudit("Cancellation Denied", `Request ID: ${requestId}`);
-        showSimpleModal("Success", "Cancellation denied. The order has been re-assigned to the original delivery partner.");
+        showToast("Cancellation denied.");
     }
 }
 
@@ -478,6 +477,7 @@ async function renderAdminRestaurantDetailsView(restaurantId) {
             </div>
             <div class="mt-6 border-t pt-4 space-y-2">
                 <p><strong>Address:</strong> ${restaurant.address}</p>
+                <p><strong>Phone:</strong> ${restaurant.mobile || 'Not provided'}</p>
                 <p><strong>Restaurant ID:</strong> ${restaurant.id}</p>
                  <div class="bg-gray-100 p-4 rounded-lg mt-4">
                              <h4 class="font-semibold">Owner Credentials</h4>
@@ -520,6 +520,10 @@ async function showAddRestaurantForm() {
                 <textarea name="address" class="input-field w-full" rows="2" required></textarea>
             </div>
             <div>
+                <label class="block text-sm font-medium">Restaurant Phone Number</label>
+                <input type="tel" name="mobile" class="input-field w-full" placeholder="+919876543210" required>
+            </div>
+            <div>
                 <label class="block text-sm font-medium">Owner's Username (Email)</label>
                 <input type="email" name="username" class="input-field w-full" required>
             </div>
@@ -559,6 +563,7 @@ async function showAddRestaurantForm() {
         const newRestaurantData = {
             name: form.elements.name.value,
             address: form.elements.address.value,
+            mobile: form.elements.mobile.value,
             email: form.elements.username.value,
             password: form.elements.password.value,
             imageUrls: form.elements.imageUrls.value.split('\n').filter(url => url.trim() !== '')
@@ -568,13 +573,10 @@ async function showAddRestaurantForm() {
             await processRestaurantCreation(newRestaurantData);
             closeModal();
             adminDataCache.restaurants = []; // Invalidate cache
-            showSimpleModal(
-                "Restaurant Creation Submitted!",
-                `The request to create an account for ${newRestaurantData.email} has been submitted and processed.`
-            );
+            showToast('Restaurant created successfully!');
             renderAdminView('restaurants');
         } catch (err) {
-            showSimpleModal("Error", `Could not submit creation request: ${err.message}`);
+            showToast(`Creation failed: ${err.message}`, 'error');
         }
     });
 }
@@ -592,6 +594,7 @@ async function processRestaurantCreation(data) {
             name: data.name,
             cuisine: "Default Cuisine",
             address: data.address,
+            mobile: data.mobile,
             ownerId: ownerUid,
             isLocked: false,
             isHidden: false,
@@ -613,7 +616,7 @@ async function processRestaurantCreation(data) {
         await logAudit("Restaurant Created", `Name: ${data.name}, Owner: ${data.email}`);
 
     } catch (error) {
-        console.error("Error in simulated backend processing:", error);
+        console.error("Error in restaurant creation:", error);
         throw error;
     } finally {
         await tempAuth.signOut();
@@ -658,13 +661,10 @@ async function showAddDeliveryBoyForm() {
             await processDeliveryBoyCreation(newUserData);
             closeModal();
             adminDataCache.deliveryBoys = []; // Invalidate cache
-            showSimpleModal(
-                "Delivery Boy Created!",
-                `Account for ${newUserData.email} has been successfully created.`
-            );
+            showToast('Delivery Boy account created!');
             renderAdminView('delivery-boys');
         } catch (err) {
-            showSimpleModal("Error", `Could not create account: ${err.message}`);
+            showToast(`Could not create account: ${err.message}`, 'error');
         }
     });
 }
@@ -704,7 +704,7 @@ async function processDeliveryBoyCreation(data) {
 async function showEditRestaurantForm(restaurantId) {
     const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
     if (!restaurantDoc.exists) {
-        showSimpleModal("Error", "Restaurant not found!");
+        showToast("Restaurant not found!", "error");
         return;
     }
     const restaurant = restaurantDoc.data();
@@ -724,6 +724,10 @@ async function showEditRestaurantForm(restaurantId) {
             <div>
                 <label class="block text-sm font-medium">Address</label>
                 <textarea name="address" class="input-field w-full" rows="3" required>${restaurant.address}</textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Phone Number</label>
+                <input type="tel" name="mobile" class="input-field w-full" value="${restaurant.mobile || ''}" required>
             </div>
             <div>
                 <label class="block text-sm font-medium">Image URLs</label>
@@ -767,12 +771,13 @@ async function handleUpdateRestaurant(e) {
         name: form.elements.name.value,
         cuisine: form.elements.cuisine.value,
         address: form.elements.address.value,
+        mobile: form.elements.mobile.value,
         imageUrls: form.elements.imageUrls.value.split('\n').filter(url => url.trim() !== ''),
     };
     await db.collection('restaurants').doc(restaurantId).update(updatedData);
     adminDataCache.restaurants = []; // Invalidate cache
     await logAudit("Restaurant Updated", `ID: ${restaurantId}`);
-    showSimpleModal("Success", "Restaurant updated successfully!");
+    showToast("Restaurant updated successfully!");
     closeModal();
     renderAdminRestaurantDetailsView(restaurantId);
 }
@@ -781,9 +786,11 @@ async function handleToggleLock(restaurantId) {
     const restaurantRef = db.collection('restaurants').doc(restaurantId);
     const doc = await restaurantRef.get();
     const currentStatus = doc.data().isLocked || false;
-    await restaurantRef.update({ isLocked: !currentStatus });
+    const newStatus = !currentStatus;
+    await restaurantRef.update({ isLocked: newStatus });
     adminDataCache.restaurants = [];
-    await logAudit(`Restaurant ${!currentStatus ? 'Locked' : 'Unlocked'}`, `ID: ${restaurantId}`);
+    await logAudit(`Restaurant ${newStatus ? 'Locked' : 'Unlocked'}`, `ID: ${restaurantId}`);
+    showToast(`Restaurant has been ${newStatus ? 'locked' : 'unlocked'}.`);
     renderAdminRestaurantDetailsView(restaurantId);
 }
 
@@ -791,9 +798,11 @@ async function handleToggleVisibility(restaurantId) {
     const restaurantRef = db.collection('restaurants').doc(restaurantId);
     const doc = await restaurantRef.get();
     const isCurrentlyHidden = doc.data().isHidden || false;
-    await restaurantRef.update({ isHidden: !isCurrentlyHidden });
+    const newVisibility = !isCurrentlyHidden;
+    await restaurantRef.update({ isHidden: newVisibility });
     adminDataCache.restaurants = [];
-    await logAudit(`Restaurant visibility changed`, `ID: ${restaurantId}, New Status: ${!isCurrentlyHidden ? 'Hidden' : 'Visible'}`);
+    await logAudit(`Restaurant visibility changed`, `ID: ${restaurantId}, New Status: ${newVisibility ? 'Hidden' : 'Visible'}`);
+    showToast(`Restaurant is now ${newVisibility ? 'hidden' : 'visible'}.`);
     renderAdminRestaurantDetailsView(restaurantId);
 }
 
@@ -804,23 +813,20 @@ async function handleToggleDeliverySupport(restaurantId) {
     await restaurantRef.update({ supportsDelivery: supportsDelivery });
     adminDataCache.restaurants = [];
     await logAudit(`Restaurant delivery support changed`, `ID: ${restaurantId}, New Status: ${supportsDelivery ? 'Enabled' : 'Disabled'}`);
+    showToast(`Delivery support has been ${supportsDelivery ? 'enabled' : 'disabled'}.`);
     renderAdminRestaurantDetailsView(restaurantId);
 }
 
 async function handleChangeRestaurantPassword(restaurantId) {
     const newPassword = prompt("Enter the new temporary password for this restaurant:");
     if (newPassword && newPassword.length >= 6) {
-        showConfirmationModal('Confirm Password Change', `Set new password to "${newPassword}"? This only updates the password display for the admin.`,
-            async () => {
-                await db.collection('restaurants').doc(restaurantId).update({ initialPassword: newPassword });
-                adminDataCache.restaurants = [];
-                await logAudit("Restaurant Password Changed", `ID: ${restaurantId}`);
-                showSimpleModal("Success", "Temporary password display has been updated.");
-                renderAdminRestaurantDetailsView(restaurantId);
-            }
-        );
+        await db.collection('restaurants').doc(restaurantId).update({ initialPassword: newPassword });
+        adminDataCache.restaurants = [];
+        await logAudit("Restaurant Password Changed", `ID: ${restaurantId}`);
+        showToast("Temporary password display has been updated.");
+        renderAdminRestaurantDetailsView(restaurantId);
     } else if (newPassword) {
-        showSimpleModal("Error", "Password must be at least 6 characters long.");
+        showToast("Password must be at least 6 characters long.", "error");
     }
 }
 
@@ -970,8 +976,10 @@ async function showMenuItemForm(restaurantId, itemId = null) {
 
         if (itmId) {
             await db.collection('restaurants').doc(restId).collection('menu').doc(itmId).update(data);
+            showToast("Menu item updated!");
         } else {
             await db.collection('restaurants').doc(restId).collection('menu').add(data);
+            showToast("New menu item added!");
         }
         closeModal();
     });
@@ -981,6 +989,7 @@ function handleDeleteMenuItem(restaurantId, itemId) {
     showConfirmationModal("Delete Item?", "Are you sure you want to permanently delete this menu item? This cannot be undone.",
         async () => {
             await db.collection('restaurants').doc(restaurantId).collection('menu').doc(itemId).delete();
+            showToast("Menu item deleted.", "error");
         }
     );
 }
@@ -1151,21 +1160,13 @@ async function renderDeliveryBoyDetailsView(userId) {
 async function handleChangeDeliveryBoyPassword(userId) {
     const newPassword = prompt("Enter the new temporary password for this user:");
     if (newPassword && newPassword.length >= 6) {
-        showConfirmationModal(
-            'Confirm Password Change',
-            `Set new password to "${newPassword}"? This only updates the password display for the admin.`,
-            async () => {
-                await db.collection('users').doc(userId).update({
-                    initialPassword: newPassword
-                });
-                adminDataCache.deliveryBoys = [];
-                await logAudit("Delivery Boy Password Changed", `ID: ${userId}`);
-                showSimpleModal("Success", "Temporary password display has been updated.");
-                renderDeliveryBoyDetailsView(userId);
-            }
-        );
+        await db.collection('users').doc(userId).update({ initialPassword: newPassword });
+        adminDataCache.deliveryBoys = [];
+        await logAudit("Delivery Boy Password Changed", `ID: ${userId}`);
+        showToast("Temporary password display has been updated.");
+        renderDeliveryBoyDetailsView(userId);
     } else if (newPassword) {
-        showSimpleModal("Error", "Password must be at least 6 characters long.");
+        showToast("Password must be at least 6 characters long.", "error");
     }
 }
 
@@ -1173,9 +1174,11 @@ async function handleToggleDeliveryBoyLock(userId) {
     const userRef = db.collection('users').doc(userId);
     const doc = await userRef.get();
     const currentStatus = doc.data().isLocked || false;
-    await userRef.update({ isLocked: !currentStatus });
+    const newStatus = !currentStatus;
+    await userRef.update({ isLocked: newStatus });
     adminDataCache.deliveryBoys = [];
-    await logAudit(`Delivery Boy ${!currentStatus ? 'Locked' : 'Unlocked'}`, `ID: ${userId}`);
+    await logAudit(`Delivery Boy ${newStatus ? 'Locked' : 'Unlocked'}`, `ID: ${userId}`);
+    showToast(`Delivery boy has been ${newStatus ? 'locked' : 'unlocked'}.`);
     renderDeliveryBoyDetailsView(userId);
 }
 
@@ -1188,7 +1191,7 @@ async function handleRemoveDeliveryBoy(userId) {
             adminDataCache.deliveryBoys = [];
             adminDataCache.users = [];
             await logAudit("Delivery Boy Removed", `ID: ${userId}`);
-            showSimpleModal("Success", "Delivery boy profile has been removed.");
+            showToast("Delivery boy profile has been removed.", "error");
             renderAdminView('delivery-boys');
         }
     );
@@ -1232,7 +1235,7 @@ function startScanner() {
 
     html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: {width: 250, height: 250} }, onScanSuccess, onScanFailure)
         .catch(err => {
-            showSimpleModal("Camera Error", "Could not start camera. Please ensure you have a camera and have granted permission.");
+            showToast("Could not start camera. Please ensure you have a camera and have granted permission.", "error");
             console.error("Camera start error", err);
             stopScanner();
         });
@@ -1287,7 +1290,7 @@ async function renderOrderBill(orderId, targetContainer = null) {
          if (targetContainer) {
             targetContainer.innerHTML = content;
         } else {
-            showSimpleModal("Error", "Order not found.");
+            showModal(`<div class="p-4">${content}</div>`);
         }
         return;
     }
@@ -1403,6 +1406,37 @@ function downloadBillAsPDF(orderId) {
             };
             html2pdf().from(element).set(opt).save();
 }
+
+// --- NEW: Toast Notification Function ---
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500'
+    };
+    const icons = {
+        success: 'check-circle',
+        error: 'alert-circle',
+        info: 'info'
+    };
+    
+    toast.className = `flex items-center gap-4 ${colors[type]} text-white py-3 px-5 rounded-lg shadow-xl toast-enter`;
+    toast.innerHTML = `<i data-feather="${icons[type]}"></i><span class="font-semibold">${message}</span>`;
+    
+    container.appendChild(toast);
+    feather.replace();
+    
+    setTimeout(() => {
+        toast.classList.remove('toast-enter');
+        toast.classList.add('toast-exit');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 4000); // Stays for 4 seconds
+}
+
 function showModal(contentHtml) {
     modalContainer.innerHTML = `<div class="modal-content">${contentHtml}</div>`;
     modalContainer.classList.add('active');
