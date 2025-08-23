@@ -413,8 +413,6 @@ function initializeCustomerPortal() {
         mobileNavContainer.addEventListener('click', handleCustomerClicks);
     }
     
-    // *** FIX STARTS HERE ***
-    // Expanded this listener to handle all actions within modals.
     modalContainer.addEventListener('click', (e) => {
         const actionButton = e.target.closest('[data-action]');
         if (actionButton) {
@@ -425,18 +423,10 @@ function initializeCustomerPortal() {
                     break;
                 case 'add-to-cart':
                     addToCart(itemId, itemName, parseFloat(itemPrice), restaurantId, restaurantName);
-                    // Optional: Give user feedback
-                    actionButton.innerHTML = 'Added!';
-                    setTimeout(() => {
-                        actionButton.innerHTML = `<i data-feather="plus" class="w-5 h-5"></i><span data-translate-key="addToCart">Add to Cart</span>`;
-                        feather.replace();
-                        updateUIText();
-                    }, 1000);
                     break;
             }
         }
     });
-    // *** FIX ENDS HERE ***
 
     cartButton.addEventListener('click', renderCartView);
     renderCustomerView('home');
@@ -1017,6 +1007,7 @@ function addToCart(itemId, itemName, itemPrice, restaurantId, restaurantName) {
             () => {
                 cart = [{ id: itemId, name: itemName, price: itemPrice, quantity: 1, restaurantId, restaurantName }];
                 updateCartButton();
+                showToast(`${itemName} added to cart!`);
             }
         );
         return;
@@ -1029,6 +1020,7 @@ function addToCart(itemId, itemName, itemPrice, restaurantId, restaurantName) {
         cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1, restaurantId, restaurantName });
     }
     updateCartButton();
+    showToast(`${itemName} added to cart!`);
 }
 
 function removeFromCart(itemId) {
@@ -1194,6 +1186,37 @@ async function handlePlaceOrder(form) {
 }
 
 // --- UTILITY, BILLING & RATING FUNCTIONS ---
+
+// *** NEW: Toast Notification Function ***
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500'
+    };
+    
+    toast.className = `flex items-center gap-3 ${colors[type]} text-white py-3 px-5 rounded-lg shadow-lg toast-enter`;
+    toast.innerHTML = `
+        <i data-feather="check-circle" class="w-6 h-6"></i>
+        <span class="font-semibold">${message}</span>
+    `;
+    
+    toastContainer.appendChild(toast);
+    feather.replace();
+    
+    setTimeout(() => {
+        toast.classList.remove('toast-enter');
+        toast.classList.add('toast-exit');
+        setTimeout(() => {
+            toast.remove();
+        }, 500); // Match animation duration
+    }, 3000); // How long the toast stays visible
+}
+
+
 async function renderOrderBill(orderId, targetContainer = null) {
     const orderDoc = await db.collection('orders').doc(orderId).get();
     if (!orderDoc.exists) { showSimpleModal("Error", "Order not found."); return; }
