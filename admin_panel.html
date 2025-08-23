@@ -21,6 +21,8 @@
         :root {
             --primary-color: #1a202c;
             --secondary-color: #D4AF37;
+            /* --- NEW: Neon Glow Color --- */
+            --neon-glow-color: rgba(59, 130, 246, 0.8); /* Blue glow, you can change this */
         }
         html, body { height: 100%; }
         body { 
@@ -58,6 +60,29 @@
         
         #mobile-menu-overlay { transition: opacity 0.3s ease-in-out; }
         .notification-badge { background-color: #E53935; color: white; border-radius: 50%; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; }
+        
+        /* --- START: NEW NEON GLOW STYLES --- */
+        @keyframes neon-glow-anim {
+          from {
+            box-shadow: 0 0 5px var(--neon-glow-color), 0 0 10px var(--neon-glow-color);
+          }
+          to {
+            box-shadow: 0 0 10px var(--neon-glow-color), 0 0 20px var(--neon-glow-color);
+          }
+        }
+        .neon-border {
+            border: 2px solid var(--neon-glow-color);
+            animation: neon-glow-anim 2s infinite alternate ease-in-out;
+        }
+        .restaurant-admin-card.neon-border {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .restaurant-admin-card.neon-border:hover {
+            transform: translateY(-5px) scale(1.02);
+            animation-play-state: paused; /* Pause animation for a stable, stronger glow on hover */
+        }
+        /* --- END: NEW NEON GLOW STYLES --- */
+
     </style>
     <script src="admin_panel.js" defer></script>
 </head>
@@ -112,7 +137,16 @@
                     <button class="w-full text-left sidebar-link" data-view="profile"><span><i data-feather="user"></i>Profile</span></button>
                 </nav>
             </aside>
-            <main id="admin-main-content" class="lg:col-span-3 pb-4 lg:pb-0"></main>
+            <main id="admin-main-content" class="lg:col-span-3 pb-4 lg:pb-0">
+                <div class="relative mb-6">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i data-feather="search" class="w-5 h-5 text-gray-400"></i>
+                    </div>
+                    <input type="search" id="admin-global-search" class="input-field w-full p-3 pl-12 rounded-full shadow-sm" placeholder="Search anything in the current view...">
+                </div>
+                <div id="admin-content-area">
+                    </div>
+            </main>
         </div>
     </template>
 
