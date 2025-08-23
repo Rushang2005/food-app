@@ -45,6 +45,7 @@ const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 
 // --- CORE APP LOGIC ---
 
+
 async function initializeApp() {
     const settingsDoc = await db.collection('settings').doc('config').get();
     if (settingsDoc.exists) {
@@ -53,7 +54,6 @@ async function initializeApp() {
     applySiteSettings();
 
     setupMobileMenuHandlers();
-
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             const userDoc = await db.collection('users').doc(user.uid).get();
@@ -75,6 +75,17 @@ async function initializeApp() {
                 userInfo.innerHTML = userHtml;
                 mobileUserInfo.innerHTML = userHtml;
                 loadAdminPortal();
+
+                
+                const settingsListener = db.collection('settings').doc('config').onSnapshot(doc => {
+                    console.log("Admin Panel: Real-time settings received!"); // For debugging
+                    if (doc.exists) {
+                        siteSettings = doc.data();
+                        applySiteSettings(); // This now works on the correct UI
+                    }
+                });
+                unsubscribeListeners.push(settingsListener); // Add to cleanup queue
+
             } else {
                 document.body.innerHTML = `<div style="text-align: center; padding: 50px; font-family: sans-serif; color: #333;">
                     <h1 style="color: #d9534f;">Access Denied</h1>
@@ -113,6 +124,10 @@ function setupMobileMenuHandlers() {
 }
 
 function applySiteSettings() {
+    // Safely access the nested theme object
+    const theme = siteSettings.theme || {};
+    const globalTheme = theme.global || {};
+
     if (siteSettings.websiteName) {
         websiteNameHeader.textContent = siteSettings.websiteName + " Admin";
         document.title = siteSettings.websiteName + " - Admin Panel";
@@ -120,14 +135,11 @@ function applySiteSettings() {
     if (siteSettings.logoUrl) {
         websiteLogoHeader.src = siteSettings.logoUrl;
     }
-    if (siteSettings.primaryColor) {
-        document.documentElement.style.setProperty('--primary-color', siteSettings.primaryColor);
-    }
-    if (siteSettings.secondaryColor) {
-        document.documentElement.style.setProperty('--secondary-color', siteSettings.secondaryColor);
-    }
+    
+    // Read colors from the correct nested globalTheme object
+    document.documentElement.style.setProperty('--primary-color', globalTheme.primaryColor || '#1a202c');
+    document.documentElement.style.setProperty('--secondary-color', globalTheme.secondaryColor || '#D4AF37');
 }
-
 
 async function logAudit(action, details) {
     if (!currentUser) return;
@@ -863,6 +875,8 @@ async function renderAdminMenuManagementView(restaurantId) {
     unsubscribeListeners.push(unsub);
 }
 
+// REPLACE the existing renderMenuItemCard function in admin_panel.js with this one:
+
 function renderMenuItemCard(doc, restaurantId) {
     const item = doc.data();
     const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
@@ -875,7 +889,10 @@ function renderMenuItemCard(doc, restaurantId) {
                 <p class="font-semibold">${item.name}</p>
                 <p class="text-sm text-gray-600">${item.description || 'No description.'}</p>
                 <div class="mt-1 text-sm">
-                    ${variants.map(v => `<span class="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs font-semibold mr-1 mb-1">${v.name}: ₹${v.price}</span>`).join('')}
+                    ${variants.map(v => {
+                        const displayName = v.name ? `${v.name}: ` : '';
+                        return `<span class="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs font-semibold mr-1 mb-1">${displayName}₹${v.price}</span>`;
+                    }).join('')}
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
@@ -885,6 +902,8 @@ function renderMenuItemCard(doc, restaurantId) {
         </div>
     `;
 }
+
+// REPLACE the existing showMenuItemForm function in admin_panel.js with this one:
 
 async function showMenuItemForm(restaurantId, itemId = null) {
     const isEditing = itemId !== null;
@@ -910,11 +929,11 @@ async function showMenuItemForm(restaurantId, itemId = null) {
                 <img id="menu-image-preview" src="${item.imageUrl || 'https://placehold.co/100x100?text=Preview'}" class="mt-2 w-24 h-24 object-cover rounded-md border" onerror="this.src='https://placehold.co/100x100?text=Invalid'"/>
             </div>
             <div class="border-t pt-4 mt-4">
-                <h4 class="font-semibold mb-2">Pricing Variants</h4>
+                <h4 class="font-semibold mb-2">Pricing</h4>
                 <div id="variants-container" class="space-y-2">
                     ${item.variants.map((v, index) => `
                         <div class="variant-row flex items-center gap-2">
-                            <input type="text" class="input-field flex-grow" placeholder="Variant Name (e.g., Half)" value="${v.name || ''}" required>
+                            <input type="text" class="input-field flex-grow" placeholder="Variant Name (e.g., Half) - Optional" value="${v.name || ''}">
                             <input type="number" class="input-field w-28" placeholder="Price" value="${v.price || ''}" step="0.01" required>
                             <button type="button" class="btn btn-danger p-2 remove-variant-btn" ${index === 0 ? 'disabled' : ''}>&times;</button>
                         </div>
@@ -939,7 +958,7 @@ async function showMenuItemForm(restaurantId, itemId = null) {
         const row = document.createElement('div');
         row.className = 'variant-row flex items-center gap-2';
         row.innerHTML = `
-            <input type="text" class="input-field flex-grow" placeholder="Variant Name (e.g., Full)" required>
+            <input type="text" class="input-field flex-grow" placeholder="Variant Name (e.g., Full) - Optional">
             <input type="number" class="input-field w-28" placeholder="Price" step="0.01" required>
             <button type="button" class="btn btn-danger p-2 remove-variant-btn">&times;</button>
         `;
