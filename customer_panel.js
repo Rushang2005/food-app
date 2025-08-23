@@ -457,6 +457,7 @@ function handleCustomerClicks(e) {
             case 'place-order': handlePlaceOrder(actionButton.form); break;
             case 'view-bill': renderOrderBill(orderId); break;
             case 'rate-order': showRatingForm(orderId); break;
+            case 'view-item-details': renderMenuItemDetailView(itemId, restaurantId); break;
         }
     }
 }
@@ -569,6 +570,7 @@ function renderFeaturedRestaurantCard(doc) {
             <div class="p-4">
                 <h3 class="font-bold text-lg font-serif truncate">${r.name}</h3>
                 <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
+                <p class="text-xs text-gray-600 truncate mt-1 flex items-center"><i data-feather="map-pin" class="inline-block w-3 h-3 mr-1 flex-shrink-0"></i>${r.address || ''}</p>
                 <div class="flex items-center mt-2 text-xs text-gray-700">
                    <i data-feather="star" class="w-4 h-4 fill-current text-yellow-500"></i>
                    <span class="ml-1 font-bold">${(r.avgRating || 0).toFixed(1)}</span>
@@ -593,6 +595,7 @@ function renderRestaurantCard(doc) {
             <div class="p-5">
                 <h3 class="font-bold text-xl font-serif">${r.name}</h3>
                 <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
+                <p class="text-sm text-gray-600 truncate mt-1 flex items-center"><i data-feather="map-pin" class="inline-block w-4 h-4 mr-1 flex-shrink-0"></i>${r.address || ''}</p>
                 <div class="flex items-center mt-2 text-sm text-gray-700">
                    <i data-feather="star" class="w-4 h-4 fill-current text-yellow-500"></i>
                    <span class="ml-1 font-bold">${(r.avgRating || 0).toFixed(1)}</span>
@@ -727,62 +730,65 @@ async function renderCustomerRestaurantView(restaurantId) {
         menuHtml = menuSnapshot.docs.map(doc => {
             const item = doc.data();
             const isAvailable = item.isAvailable !== false;
-            const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
-
-            let pricingHtml;
+            const itemImage = item.imageUrl || 'https://placehold.co/400x300?text=Food';
             const variants = item.variants && item.variants.length > 0 ? item.variants : [{ name: '', price: item.price }];
-            
-            const buttonClasses = "btn btn-secondary py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 w-full md:w-auto md:py-3 md:px-6";
-            
+
+            // --- UI for Mobile ---
+            let mobilePricingHtml;
             if (variants.length > 1) {
-                pricingHtml = variants.map(v => `
-                    <div class="flex justify-between items-center py-2 border-t mt-2">
-                        <div>
-                            <p class="font-semibold">${v.name}</p>
-                            <p class="font-bold text-lg">₹${v.price}</p>
-                        </div>
-                        <button 
-                            data-action="add-to-cart" 
-                            data-item-id="${doc.id}-${v.name}" 
-                            data-item-name="${item.name} (${v.name})" 
-                            data-item-price="${v.price}" 
-                            data-restaurant-id="${restaurantId}" 
-                            data-restaurant-name="${restaurant.name}" 
-                            class="${buttonClasses}"
-                            ${!isAvailable ? 'disabled' : ''}>
-                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i>
-                            <span data-translate-key="addToCart">Add to Cart</span>
-                        </button>
-                    </div>
-                `).join('');
+                mobilePricingHtml = `<div class="mt-2 text-sm text-center text-gray-700">Multiple options</div>`;
             } else {
-                pricingHtml = `
-                    <div class="flex items-center justify-between mt-2">
-                         <p class="font-bold text-xl text-gray-800">₹${variants[0].price}</p>
+                mobilePricingHtml = `
+                    <div class="flex items-center justify-between mt-3">
+                         <p class="font-bold text-lg text-gray-800">₹${variants[0].price}</p>
                          <button 
-                            data-action="add-to-cart" 
-                            data-item-id="${doc.id}" 
-                            data-item-name="${item.name}" 
-                            data-item-price="${variants[0].price}" 
-                            data-restaurant-id="${restaurantId}" 
-                            data-restaurant-name="${restaurant.name}" 
-                            class="${buttonClasses}" 
+                            data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${variants[0].price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" 
+                            class="btn btn-secondary py-2 px-3 rounded-lg font-semibold flex items-center justify-center gap-2" 
                             ${!isAvailable ? 'disabled' : ''}>
-                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i>
-                            <span data-translate-key="addToCart">Add to Cart</span>
+                            <i data-feather="plus" class="w-5 h-5"></i>
                         </button>
                     </div>`;
             }
-
-            return `
-                <div class="bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg flex items-center gap-4 p-4 ${!isAvailable ? 'opacity-60 bg-gray-50' : ''}">
-                    <img src="${itemImage}" class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
-                    <div class="flex-grow text-center md:text-left w-full">
-                        <p class="font-bold text-lg font-serif">${item.name}</p>
-                        <p class="text-sm text-gray-500 mt-1 mb-2">${item.description || 'Delicious item from this restaurant.'}</p>
-                        ${pricingHtml}
+            const mobileCard = `
+                <div class="block md:hidden bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg flex flex-col cursor-pointer ${!isAvailable ? 'opacity-60 bg-gray-50 cursor-not-allowed' : ''}"
+                    data-action="view-item-details" data-item-id="${doc.id}" data-restaurant-id="${restaurantId}">
+                    <img src="${itemImage}" class="w-full h-32 object-cover">
+                    <div class="p-3 flex flex-col flex-grow">
+                        <p class="font-bold font-serif flex-grow">${item.name}</p>
+                        ${mobilePricingHtml}
                     </div>
                 </div>`;
+
+            // --- UI for Desktop (Original) ---
+            let desktopPricingHtml;
+            const desktopButtonClasses = "btn btn-secondary py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 w-full md:w-auto md:py-3 md:px-6";
+            if (variants.length > 1) {
+                desktopPricingHtml = variants.map(v => `
+                    <div class="flex justify-between items-center py-2 border-t mt-2">
+                        <div><p class="font-semibold">${v.name}</p><p class="font-bold text-lg">₹${v.price}</p></div>
+                        <button data-action="add-to-cart" data-item-id="${doc.id}-${v.name}" data-item-name="${item.name} (${v.name})" data-item-price="${v.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="${desktopButtonClasses}" ${!isAvailable ? 'disabled' : ''}>
+                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+                    </div>`).join('');
+            } else {
+                desktopPricingHtml = `
+                    <div class="flex items-center justify-between mt-2">
+                         <p class="font-bold text-xl text-gray-800">₹${variants[0].price}</p>
+                         <button data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${variants[0].price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="${desktopButtonClasses}" ${!isAvailable ? 'disabled' : ''}>
+                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+                    </div>`;
+            }
+            const desktopCard = `
+                <div class="hidden md:flex bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg items-center gap-4 p-4 cursor-pointer ${!isAvailable ? 'opacity-60 bg-gray-50 cursor-not-allowed' : ''}"
+                    data-action="view-item-details" data-item-id="${doc.id}" data-restaurant-id="${restaurantId}">
+                    <img src="${itemImage}" class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
+                    <div class="flex-grow text-left w-full">
+                        <p class="font-bold text-lg font-serif">${item.name}</p>
+                        <p class="text-sm text-gray-500 mt-1 mb-2">${item.description || ''}</p>
+                        <div>${desktopPricingHtml}</div>
+                    </div>
+                </div>`;
+
+            return mobileCard + desktopCard;
         }).join('');
     }
 
@@ -792,14 +798,97 @@ async function renderCustomerRestaurantView(restaurantId) {
             <div class="bg-white rounded-xl shadow-md p-6">
                 <h2 class="text-3xl md:text-4xl font-bold font-serif">${restaurant.name}</h2>
                 <p class="text-gray-600 mt-1">${restaurant.cuisine}</p>
+                <p class="text-gray-500 mt-2 flex items-center"><i data-feather="map-pin" class="w-4 h-4 mr-2 flex-shrink-0"></i><span>${restaurant.address || ''}</span></p>
                 <div class="mt-6">
                     <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="menu">Menu</h3>
-                    <div class="space-y-4">${menuHtml}</div>
+                    <div class="grid grid-cols-2 md:grid-cols-1 gap-4">${menuHtml}</div>
                 </div>
             </div>
         </div>`;
     feather.replace();
     updateUIText();
+}
+
+async function renderMenuItemDetailView(itemId, restaurantId) {
+    const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
+    const itemDoc = await db.collection('restaurants').doc(restaurantId).collection('menu').doc(itemId).get();
+
+    if (!restaurantDoc.exists || !itemDoc.exists) {
+        showSimpleModal("Error", "Item details could not be found.");
+        return;
+    }
+
+    const restaurant = restaurantDoc.data();
+    const item = itemDoc.data();
+    const isAvailable = item.isAvailable !== false;
+    const itemImage = item.imageUrl || 'https://placehold.co/600x400?text=Food';
+
+    let pricingHtml;
+    const variants = item.variants && item.variants.length > 0 ? item.variants : [{ name: '', price: item.price }];
+    const buttonClasses = "btn btn-secondary py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2";
+
+    if (variants.length > 1) {
+        pricingHtml = variants.map(v => `
+            <div class="flex flex-col text-center items-center gap-2 md:text-left md:flex-row md:justify-between py-3 border-t">
+                <div>
+                    <p class="font-semibold">${v.name}</p>
+                    <p class="font-bold text-xl">₹${v.price}</p>
+                </div>
+                <button 
+                    data-action="add-to-cart" 
+                    data-item-id="${itemId}-${v.name}" 
+                    data-item-name="${item.name} (${v.name})" 
+                    data-item-price="${v.price}" 
+                    data-restaurant-id="${restaurantId}" 
+                    data-restaurant-name="${restaurant.name}" 
+                    class="${buttonClasses}"
+                    ${!isAvailable ? 'disabled' : ''}>
+                    <i data-feather="plus" class="w-5 h-5"></i>
+                    <span data-translate-key="addToCart">Add to Cart</span>
+                </button>
+            </div>
+        `).join('');
+    } else {
+        pricingHtml = `
+            <div class="flex flex-col items-center gap-4 md:flex-row md:justify-between mt-4 pt-4 border-t">
+                 <p class="font-bold text-2xl text-gray-800">₹${variants[0].price}</p>
+                 <button 
+                    data-action="add-to-cart" 
+                    data-item-id="${itemId}" 
+                    data-item-name="${item.name}" 
+                    data-item-price="${variants[0].price}" 
+                    data-restaurant-id="${restaurantId}" 
+                    data-restaurant-name="${restaurant.name}" 
+                    class="${buttonClasses} py-3 px-6" 
+                    ${!isAvailable ? 'disabled' : ''}>
+                    <i data-feather="plus" class="w-5 h-5"></i>
+                    <span data-translate-key="addToCart">Add to Cart</span>
+                </button>
+            </div>`;
+    }
+
+    const modalHtml = `
+      <div class="relative">
+        <button onclick="closeModal()" class="absolute top-2 right-2 bg-white/70 backdrop-blur-sm rounded-full p-1 text-gray-800 hover:text-black z-10">
+            <i data-feather="x" class="w-6 h-6"></i>
+        </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div>
+                <img src="${itemImage}" class="w-full h-auto object-cover rounded-lg shadow-lg aspect-square">
+            </div>
+            <div class="flex flex-col h-full">
+                <h2 class="text-3xl font-bold font-serif">${item.name}</h2>
+                ${!isAvailable ? '<p class="text-red-500 font-semibold mt-2" data-translate-key="unavailable">Currently Unavailable</p>' : ''}
+                <p class="text-gray-600 mt-2 flex-grow">${item.description || 'No description available.'}</p>
+                <div class="mt-4">
+                    ${pricingHtml}
+                </div>
+            </div>
+        </div>
+      </div>
+    `;
+    
+    showModal(modalHtml);
 }
 
 
