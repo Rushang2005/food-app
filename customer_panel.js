@@ -715,7 +715,7 @@ async function renderCustomerRestaurantView(restaurantId) {
     const contentArea = document.getElementById('customer-main-content');
     contentArea.innerHTML = `<p>Loading restaurant...</p>`;
     const restaurantDoc = await db.collection('restaurants').doc(restaurantId).get();
-    if(!restaurantDoc.exists) {
+    if (!restaurantDoc.exists) {
         contentArea.innerHTML = `<p>Restaurant not found.</p>`;
         return;
     }
@@ -723,36 +723,64 @@ async function renderCustomerRestaurantView(restaurantId) {
     const menuSnapshot = await db.collection('restaurants').doc(restaurantId).collection('menu').get();
 
     let menuHtml = 'No menu items found.';
-    if(!menuSnapshot.empty) {
+    if (!menuSnapshot.empty) {
         menuHtml = menuSnapshot.docs.map(doc => {
             const item = doc.data();
             const isAvailable = item.isAvailable !== false;
             const itemImage = item.imageUrl || 'https://placehold.co/100x100?text=Food';
-            const buttonTextKey = isAvailable ? 'addToCart' : 'unavailable';
-            const buttonClass = isAvailable ? 'btn-secondary' : 'bg-gray-400 cursor-not-allowed';
-            const translatedButtonText = translations[currentLanguage][buttonTextKey] || translations['en'][buttonTextKey];
 
-            return `
-                <div class="bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg flex flex-col md:flex-row items-center gap-4 p-4 ${!isAvailable ? 'opacity-60 bg-gray-50' : ''}">
-                    <img src="${itemImage}" class="w-full h-40 md:w-28 md:h-28 object-cover rounded-lg flex-shrink-0">
-                    <div class="flex-grow text-center md:text-left w-full">
-                        <p class="font-bold text-lg font-serif">${item.name}</p>
-                        <p class="text-sm text-gray-500 mt-1 mb-2">${item.description || 'Delicious item from this restaurant.'}</p>
-                        <p class="font-bold text-xl text-gray-800">₹${item.price}</p>
-                    </div>
-                    <div class="w-full md:w-auto flex-shrink-0">
+            let pricingHtml;
+            const variants = item.variants && item.variants.length > 0 ? item.variants : [{ name: '', price: item.price }];
+            
+            const buttonClasses = "btn btn-secondary py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 w-full md:w-auto md:py-3 md:px-6";
+            
+            if (variants.length > 1) {
+                pricingHtml = variants.map(v => `
+                    <div class="flex justify-between items-center py-2 border-t mt-2">
+                        <div>
+                            <p class="font-semibold">${v.name}</p>
+                            <p class="font-bold text-lg">₹${v.price}</p>
+                        </div>
                         <button 
+                            data-action="add-to-cart" 
+                            data-item-id="${doc.id}-${v.name}" 
+                            data-item-name="${item.name} (${v.name})" 
+                            data-item-price="${v.price}" 
+                            data-restaurant-id="${restaurantId}" 
+                            data-restaurant-name="${restaurant.name}" 
+                            class="${buttonClasses}"
+                            ${!isAvailable ? 'disabled' : ''}>
+                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i>
+                            <span data-translate-key="addToCart">Add to Cart</span>
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                pricingHtml = `
+                    <div class="flex items-center justify-between mt-2">
+                         <p class="font-bold text-xl text-gray-800">₹${variants[0].price}</p>
+                         <button 
                             data-action="add-to-cart" 
                             data-item-id="${doc.id}" 
                             data-item-name="${item.name}" 
-                            data-item-price="${item.price}" 
+                            data-item-price="${variants[0].price}" 
                             data-restaurant-id="${restaurantId}" 
                             data-restaurant-name="${restaurant.name}" 
-                            class="btn ${buttonClass} w-full md:w-auto py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2" 
+                            class="${buttonClasses}" 
                             ${!isAvailable ? 'disabled' : ''}>
-                            <i data-feather="plus" class="w-5 h-5"></i>
-                            <span data-translate-key="${buttonTextKey}">${translatedButtonText}</span>
+                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i>
+                            <span data-translate-key="addToCart">Add to Cart</span>
                         </button>
+                    </div>`;
+            }
+
+            return `
+                <div class="bg-white rounded-xl shadow-md overflow-hidden transition-shadow hover:shadow-lg flex items-center gap-4 p-4 ${!isAvailable ? 'opacity-60 bg-gray-50' : ''}">
+                    <img src="${itemImage}" class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
+                    <div class="flex-grow text-center md:text-left w-full">
+                        <p class="font-bold text-lg font-serif">${item.name}</p>
+                        <p class="text-sm text-gray-500 mt-1 mb-2">${item.description || 'Delicious item from this restaurant.'}</p>
+                        ${pricingHtml}
                     </div>
                 </div>`;
         }).join('');
@@ -773,6 +801,7 @@ async function renderCustomerRestaurantView(restaurantId) {
     feather.replace();
     updateUIText();
 }
+
 
 async function renderCustomerOrdersView(contentArea) {
     contentArea.innerHTML = `
@@ -797,15 +826,17 @@ function renderCustomerOrderCard(orderId, orderData) {
     const statusMap = {
         'placed': { text: 'Order Placed', color: 'bg-gray-500', progress: '20%' },
         'accepted': { text: 'Preparing Food', color: 'bg-blue-500', progress: '40%' },
+        'ready-for-pickup': { text: 'Ready for Pickup', color: 'bg-purple-500', progress: '90%' },
         'picked-up': { text: 'On The Way', color: 'bg-yellow-500', progress: '70%' },
         'delivered': { text: 'Delivered', color: 'bg-green-500', progress: '100%' },
+        'completed': { text: 'Completed', color: 'bg-green-500', progress: '100%' },
         'cancelled': { text: 'Cancelled', color: 'bg-red-500', progress: '100%' },
     };
     const currentStatus = statusMap[orderData.status] || statusMap['placed'];
 
-    let actionButtons = `<button data-action="view-bill" data-order-id="${orderId}" class="btn btn-primary">View Bill</button>`;
-    if (orderData.status === 'delivered' && !orderData.isReviewed) {
-        actionButtons += `<button data-action="rate-order" data-order-id="${orderId}" class="btn btn-secondary ml-2">Rate Order</button>`;
+    let actionButtons = `<button data-action="view-bill" data-order-id="${orderId}" class="btn btn-primary py-2 px-4">View Bill</button>`;
+    if ((orderData.status === 'delivered' || orderData.status === 'completed') && !orderData.isReviewed) {
+        actionButtons += `<button data-action="rate-order" data-order-id="${orderId}" class="btn btn-secondary ml-2 py-2 px-4">Rate Order</button>`;
     }
 
     const itemNames = orderData.items.map(i => i.name).join(' ');
@@ -907,17 +938,40 @@ function updateCartButton() {
     cartButton.classList.toggle('hidden', totalItems === 0);
 }
 
-function renderCartView() {
+async function renderCartView() {
     if (cart.length === 0) {
         showSimpleModal("Empty Cart", "Your shopping cart is empty.");
         return;
     }
 
+    const restaurantDoc = await db.collection('restaurants').doc(cart[0].restaurantId).get();
+    const restaurantData = restaurantDoc.exists ? restaurantDoc.data() : { supportsDelivery: true };
+    const supportsDelivery = restaurantData.supportsDelivery !== false;
+
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     let deliveryFee = (siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100);
     const gst = subtotal * (siteSettings.gstRate / 100);
     let platformFee = (siteSettings.platformFeeType === 'fixed') ? siteSettings.platformFee : subtotal * (siteSettings.platformFee / 100);
-    const total = subtotal + deliveryFee + gst + platformFee;
+    let total = subtotal + deliveryFee + gst + platformFee;
+    if (!supportsDelivery) {
+        total -= deliveryFee;
+    }
+
+    const deliveryOptionsHtml = `
+        <div class="mt-6">
+            <label class="block text-sm font-medium text-gray-700">Service Type</label>
+            <div class="mt-2 flex gap-x-6" id="delivery-type-container">
+                <label class="flex items-center ${!supportsDelivery ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <input type="radio" name="deliveryType" value="delivery" class="form-radio" ${supportsDelivery ? 'checked' : 'disabled'}>
+                    <span class="ml-2 text-sm text-gray-700">Delivery ${!supportsDelivery ? '(Not Available)' : ''}</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" name="deliveryType" value="takeaway" class="form-radio" ${!supportsDelivery ? 'checked' : ''}>
+                    <span class="ml-2 text-sm text-gray-700">Takeaway</span>
+                </label>
+            </div>
+        </div>
+    `;
 
     const cartHtml = `
         <form id="order-form">
@@ -928,12 +982,15 @@ function renderCartView() {
             </div>
             <div class="border-t pt-4 space-y-2">
                 <div class="flex justify-between"><p>Subtotal</p><p>₹${subtotal.toFixed(2)}</p></div>
-                <div class="flex justify-between"><p>Delivery Fee</p><p>₹${deliveryFee.toFixed(2)}</p></div>
+                <div id="delivery-fee-line" class="flex justify-between ${!supportsDelivery ? 'hidden' : ''}"><p>Delivery Fee</p><p>₹${deliveryFee.toFixed(2)}</p></div>
                 <div class="flex justify-between"><p>Platform Fee</p><p>₹${platformFee.toFixed(2)}</p></div>
                 <div class="flex justify-between"><p>GST (${siteSettings.gstRate}%)</p><p>₹${gst.toFixed(2)}</p></div>
-                <div class="flex justify-between font-bold text-lg"><p>Grand Total</p><p>₹${total.toFixed(2)}</p></div>
+                <div class="flex justify-between font-bold text-lg"><p>Grand Total</p><p id="grand-total">₹${total.toFixed(2)}</p></div>
             </div>
-            <div class="mt-6">
+            
+            ${deliveryOptionsHtml}
+            
+            <div id="delivery-address-container" class="mt-6 ${!supportsDelivery ? 'hidden' : ''}">
                 <label for="delivery-address" class="block text-sm font-medium text-gray-700">Delivery Address</label>
                 <textarea id="delivery-address" name="deliveryAddress" class="input-field mt-1 block w-full" rows="3" required>${currentUser.address || ''}</textarea>
             </div>
@@ -956,13 +1013,39 @@ function renderCartView() {
             </div>
         </form>`;
     showModal(cartHtml);
+    
+    document.getElementById('delivery-type-container').addEventListener('change', (e) => {
+        const deliveryFeeLine = document.getElementById('delivery-fee-line');
+        const deliveryAddressContainer = document.getElementById('delivery-address-container');
+        const grandTotalEl = document.getElementById('grand-total');
+        
+        let newTotal = subtotal + gst + platformFee;
+        
+        if (e.target.value === 'delivery') {
+            deliveryFeeLine.classList.remove('hidden');
+            deliveryAddressContainer.classList.remove('hidden');
+            document.getElementById('delivery-address').required = true;
+            newTotal += deliveryFee;
+        } else { // takeaway
+            deliveryFeeLine.classList.add('hidden');
+            deliveryAddressContainer.classList.add('hidden');
+            document.getElementById('delivery-address').required = false;
+        }
+        grandTotalEl.textContent = `₹${newTotal.toFixed(2)}`;
+    });
+    
+    document.querySelector('input[name="deliveryType"]:checked').dispatchEvent(new Event('change', { 'bubbles': true }));
+    
     document.getElementById('order-form').addEventListener('submit', e => { e.preventDefault(); handlePlaceOrder(e.target); });
 }
 
+
 async function handlePlaceOrder(form) {
+    const deliveryType = form.elements.deliveryType.value;
     const deliveryAddress = form.elements.deliveryAddress.value;
-    if (!deliveryAddress) {
-        showSimpleModal("Address Required", "Delivery address is required to place an order.");
+
+    if (deliveryType === 'delivery' && !deliveryAddress.trim()) {
+        showSimpleModal("Address Required", "Delivery address is required for delivery orders.");
         return;
     }
 
@@ -973,17 +1056,19 @@ async function handlePlaceOrder(form) {
     }
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = (siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100);
+    const deliveryFee = deliveryType === 'delivery' ? ((siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100)) : 0;
     const gst = subtotal * (siteSettings.gstRate / 100);
     const platformFee = (siteSettings.platformFeeType === 'fixed') ? siteSettings.platformFee : subtotal * (siteSettings.platformFee / 100);
     const totalPrice = subtotal + deliveryFee + gst + platformFee;
 
     const orderData = {
-        customerId: currentUser.uid, customerName: currentUser.name, deliveryAddress,
+        customerId: currentUser.uid, customerName: currentUser.name, 
         restaurantId: cart[0].restaurantId, restaurantName: cart[0].restaurantName,
         items: cart.map(item => ({...item})),
         subtotal, deliveryFee, platformFee, gst, gstRate: siteSettings.gstRate,
         deliveryPayout: 30.00, totalPrice, status: 'placed',
+        deliveryType: deliveryType,
+        deliveryAddress: deliveryType === 'delivery' ? deliveryAddress : 'Takeaway Order',
         paymentMethod: paymentMethod,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         deliveryBoyId: null, isReviewed: false
@@ -1027,6 +1112,8 @@ async function renderOrderBill(orderId, targetContainer = null) {
                 <p class="font-bold">Billed To:</p>
                 <p>${order.customerName}</p><p>${order.deliveryAddress}</p>
                 <p>Email: ${customer.email}</p><p>Mobile: ${customer.mobile || 'N/A'}</p>
+                <p class="mt-2"><strong>Payment Method:</strong> <span class="capitalize">${order.paymentMethod || 'N/A'}</span></p>
+                <p><strong>Service Type:</strong> <span class="capitalize">${order.deliveryType || 'Delivery'}</span></p>
             </div>
             <table class="w-full text-sm my-6">
                 <thead class="border-b bg-gray-50"><tr><th class="text-left p-2">Item</th><th class="text-center p-2">Qty</th><th class="text-right p-2">Price</th><th class="text-right p-2">Total</th></tr></thead>
