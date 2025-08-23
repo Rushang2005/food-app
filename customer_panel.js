@@ -734,6 +734,20 @@ async function renderCustomerRestaurantView(restaurantId) {
     const restaurant = restaurantDoc.data();
     const menuSnapshot = await db.collection('restaurants').doc(restaurantId).collection('menu').get();
 
+    // *** MODIFIED: Logic to always show the call button ***
+    let callButtonHtml = '';
+    if (restaurant.mobile) {
+        callButtonHtml = `
+            <a href="tel:${restaurant.mobile}" title="Call Restaurant" class="ml-4 p-2 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">
+                <i data-feather="phone-call" class="w-5 h-5"></i>
+            </a>`;
+    } else {
+        callButtonHtml = `
+            <span title="Phone number not available" class="ml-4 p-2 bg-gray-100 text-gray-400 rounded-full cursor-not-allowed">
+                <i data-feather="phone-call" class="w-5 h-5"></i>
+            </span>`;
+    }
+
     let menuHtml = 'No menu items found.';
     if (!menuSnapshot.empty) {
         menuHtml = menuSnapshot.docs.map(doc => {
@@ -805,7 +819,10 @@ async function renderCustomerRestaurantView(restaurantId) {
         <div>
             <button data-action="back-to-home" class="btn bg-white mb-4 flex items-center gap-2"><i data-feather="arrow-left"></i><span data-translate-key="backToRestaurants">Back to Restaurants</span></button>
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-3xl md:text-4xl font-bold font-serif">${restaurant.name}</h2>
+                <div class="flex items-center">
+                    <h2 class="text-3xl md:text-4xl font-bold font-serif">${restaurant.name}</h2>
+                    ${callButtonHtml}
+                </div>
                 <p class="text-gray-600 mt-1">${restaurant.cuisine}</p>
                 <p class="text-gray-500 mt-2 flex items-center"><i data-feather="map-pin" class="w-4 h-4 mr-2 flex-shrink-0"></i><span>${restaurant.address || ''}</span></p>
                 <div class="mt-6">
@@ -844,35 +861,18 @@ async function renderMenuItemDetailView(itemId, restaurantId) {
                     <p class="font-bold text-xl">₹${v.price}</p>
                 </div>
                 <button 
-                    data-action="add-to-cart" 
-                    data-item-id="${itemId}-${v.name}" 
-                    data-item-name="${item.name} (${v.name})" 
-                    data-item-price="${v.price}" 
-                    data-restaurant-id="${restaurantId}" 
-                    data-restaurant-name="${restaurant.name}" 
-                    class="${buttonClasses}"
-                    ${!isAvailable ? 'disabled' : ''}>
-                    <i data-feather="plus" class="w-5 h-5"></i>
-                    <span data-translate-key="addToCart">Add to Cart</span>
-                </button>
-            </div>
-        `).join('');
+                    data-action="add-to-cart" data-item-id="${itemId}-${v.name}" data-item-name="${item.name} (${v.name})" data-item-price="${v.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" 
+                    class="${buttonClasses}" ${!isAvailable ? 'disabled' : ''}>
+                    <i data-feather="plus" class="w-5 h-5"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+            </div>`).join('');
     } else {
         pricingHtml = `
             <div class="flex flex-col items-center gap-4 md:flex-row md:justify-between mt-4 pt-4 border-t">
                  <p class="font-bold text-2xl text-gray-800">₹${variants[0].price}</p>
                  <button 
-                    data-action="add-to-cart" 
-                    data-item-id="${itemId}" 
-                    data-item-name="${item.name}" 
-                    data-item-price="${variants[0].price}" 
-                    data-restaurant-id="${restaurantId}" 
-                    data-restaurant-name="${restaurant.name}" 
-                    class="${buttonClasses} py-3 px-6" 
-                    ${!isAvailable ? 'disabled' : ''}>
-                    <i data-feather="plus" class="w-5 h-5"></i>
-                    <span data-translate-key="addToCart">Add to Cart</span>
-                </button>
+                    data-action="add-to-cart" data-item-id="${itemId}" data-item-name="${item.name}" data-item-price="${variants[0].price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" 
+                    class="${buttonClasses} py-3 px-6" ${!isAvailable ? 'disabled' : ''}>
+                    <i data-feather="plus" class="w-5 h-5"></i><span data-translate-key="addToCart">Add to Cart</span></button>
             </div>`;
     }
 
@@ -1186,8 +1186,6 @@ async function handlePlaceOrder(form) {
 }
 
 // --- UTILITY, BILLING & RATING FUNCTIONS ---
-
-// *** NEW: Toast Notification Function ***
 function showToast(message, type = 'success') {
     const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
