@@ -56,6 +56,19 @@
             box-shadow: 0 0 10px var(--secondary-glow), 0 0 20px var(--secondary-glow);
           }
         }
+        
+        /* *** NEW: Toast Notification Animations *** */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-enter { animation: slideInRight 0.5s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.5s ease-in forwards; }
+        /* *** END NEW *** */
 
         .auth-container { min-height: 100vh; background-size: cover; background-position: center; }
         .auth-card { background-color: rgba(255, 255, 255, 0.97); backdrop-filter: blur(10px); }
@@ -294,6 +307,8 @@
     </template>
 
     <div id="modal-container" class="modal-overlay"></div>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[9999] space-y-2 w-full max-w-xs sm:max-w-sm"></div>
 
 </body>
 </html>
