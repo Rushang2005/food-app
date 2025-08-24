@@ -46,7 +46,10 @@ const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 // --- CORE APP LOGIC ---
 
 
+// REPLACE the existing initializeApp function in admin_panel.js with this one:
+
 async function initializeApp() {
+    // 1. Fetch settings ONCE for the initial page load.
     const settingsDoc = await db.collection('settings').doc('config').get();
     if (settingsDoc.exists) {
         siteSettings = settingsDoc.data();
@@ -54,6 +57,8 @@ async function initializeApp() {
     applySiteSettings();
 
     setupMobileMenuHandlers();
+
+    // 2. The onAuthStateChanged will now handle the real-time listener.
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             const userDoc = await db.collection('users').doc(user.uid).get();
@@ -76,7 +81,7 @@ async function initializeApp() {
                 mobileUserInfo.innerHTML = userHtml;
                 loadAdminPortal();
 
-                
+                // 3. ADD THE REAL-TIME LISTENER HERE, AFTER THE PORTAL IS LOADED
                 const settingsListener = db.collection('settings').doc('config').onSnapshot(doc => {
                     console.log("Admin Panel: Real-time settings received!"); // For debugging
                     if (doc.exists) {
@@ -103,6 +108,7 @@ async function initializeApp() {
     });
 }
 
+
 function setupMobileMenuHandlers() {
     const openMenu = () => {
         mobileMenuOverlay.classList.remove('hidden');
@@ -123,6 +129,8 @@ function setupMobileMenuHandlers() {
     mobileLogoutBtn.addEventListener('click', () => auth.signOut());
 }
 
+// REPLACE the existing applySiteSettings function in admin_panel.js with this one:
+
 function applySiteSettings() {
     // Safely access the nested theme object
     const theme = siteSettings.theme || {};
@@ -136,11 +144,24 @@ function applySiteSettings() {
         websiteLogoHeader.src = siteSettings.logoUrl;
     }
     
-    // Read colors from the correct nested globalTheme object
+    // Read all colors from the correct nested globalTheme object
     document.documentElement.style.setProperty('--primary-color', globalTheme.primaryColor || '#1a202c');
     document.documentElement.style.setProperty('--secondary-color', globalTheme.secondaryColor || '#D4AF37');
-}
+    document.documentElement.style.setProperty('--background-color', globalTheme.backgroundColor || '#F8F9FA');
+    document.documentElement.style.setProperty('--text-color', globalTheme.textColor || '#1f2937');
+    document.documentElement.style.setProperty('--button-text-color', globalTheme.buttonTextColor || '#ffffff');
 
+    // Gradient logic for header
+    if (globalTheme.useGradient) {
+        const gradient = `linear-gradient(to right, ${globalTheme.gradientStart || '#4c51bf'}, ${globalTheme.gradientEnd || '#6b46c1'})`;
+        document.documentElement.style.setProperty('--header-bg', gradient);
+        // Make header text readable on a dark gradient background
+        websiteNameHeader.classList.add('text-white');
+    } else {
+        document.documentElement.style.setProperty('--header-bg', '#ffffff');
+        websiteNameHeader.classList.remove('text-white');
+    }
+}
 async function logAudit(action, details) {
     if (!currentUser) return;
     try {
