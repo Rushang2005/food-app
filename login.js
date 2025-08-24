@@ -200,7 +200,7 @@ async function redirectUser(userId) {
             case 'customer':
             default:
                  // Assuming you have a customer.html
-                window.location.href = 'customer_Panel.html';
+                window.location.href = 'customer_panel.html';
                 break;
         }
     } else {
