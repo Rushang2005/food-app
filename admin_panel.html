@@ -21,15 +21,21 @@
         :root {
             --primary-color: #1a202c;
             --secondary-color: #D4AF37;
+            --background-color: #F8F9FA;       /* New */
+            --text-color: #1f2937;             /* New */
+            --header-bg: #ffffff;              /* New */
+            --button-text-color: #ffffff;      /* New */
             --neon-glow-color: rgba(59, 130, 246, 0.8);
         }
         html, body { height: 100%; }
         body { 
             font-family: 'Manrope', sans-serif; 
-            background-color: #F8F9FA;
+            background-color: var(--background-color); /* Updated */
+            color: var(--text-color);                  /* Updated */
             display: flex;
             flex-direction: column;
         }
+        header { background: var(--header-bg); } /* New */
         #app-container {
             flex: 1 0 auto;
             display: flex;
@@ -43,14 +49,14 @@
         .fade-in { animation: fadeIn 0.5s ease-out forwards; }
         .btn { transition: all 0.3s ease; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); }
-        .btn-primary { background-color: var(--primary-color); color: #ffffff; }
-        .btn-secondary { background-color: var(--secondary-color); color: #ffffff; }
+        .btn-primary { background-color: var(--primary-color); color: var(--button-text-color); } /* Updated */
+        .btn-secondary { background-color: var(--secondary-color); color: var(--button-text-color); } /* Updated */
         .input-field { background-color: #F1F3F5; border: 2px solid transparent; transition: all 0.3s ease; }
         .input-field:focus { background-color: #fff; border-color: var(--secondary-color); }
         
         .sidebar-link { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; transition: all 0.2s ease; font-weight: 500; color: #4A5568; }
         .sidebar-link:hover { background-color: #EDF2F7; color: #1A202C; }
-        .sidebar-link.active { background-color: var(--primary-color); color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .sidebar-link.active { background-color: var(--primary-color); color: var(--button-text-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); } /* Updated */
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
