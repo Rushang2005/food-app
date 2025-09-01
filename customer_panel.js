@@ -53,7 +53,8 @@ const translations = {
         yourOrder: "Your Order",
         placeOrder: "Place Order",
         close: "Close",
-        unavailable: "Unavailable"
+        unavailable: "Unavailable",
+        cancelOrder: "Cancel Order"
     },
     gu: {
         maintenanceTitle: "જાળવણી હેઠળ",
@@ -93,7 +94,8 @@ const translations = {
         yourOrder: "તમારો ઓર્ડર",
         placeOrder: "ઓર્ડર આપો",
         close: "બંધ કરો",
-        unavailable: "અનુપલબ્ધ"
+        unavailable: "અનુપલબ્ધ",
+        cancelOrder: "ઓર્ડર રદ કરો"
     },
     hi: {
         maintenanceTitle: "रखरखाव હેઠળ",
@@ -133,7 +135,8 @@ const translations = {
         yourOrder: "आपका ऑर्डर",
         placeOrder: "ऑर्डर दें",
         close: "बंद करें",
-        unavailable: "अनुपલબ્ध"
+        unavailable: "अनुपલબ્ધ",
+        cancelOrder: "ऑर्डर रद्द करें"
     }
 };
 let currentLanguage = 'en';
@@ -467,7 +470,7 @@ function handleCustomerClicks(e) {
         return;
     }
 
-    const restaurantCard = e.target.closest('.restaurant-card');
+    const restaurantCard = e.target.closest('.restaurant-card, .featured-restaurant-card');
     if (restaurantCard) {
         renderCustomerRestaurantView(restaurantCard.dataset.id);
         return;
@@ -488,10 +491,10 @@ function handleCustomerClicks(e) {
         switch(action) {
             case 'back-to-home': renderCustomerView('home'); break;
             case 'add-to-cart': addToCart(itemId, itemName, parseFloat(itemPrice), restaurantId, restaurantName); break;
-            // case 'place-order': handlePlaceOrder(actionButton.form); break; // Old handler removed
             case 'view-bill': renderOrderBill(orderId); break;
             case 'rate-order': showRatingForm(orderId); break;
             case 'view-item-details': renderMenuItemDetailView(itemId, restaurantId); break;
+            case 'cancel-order': handleCancelOrder(orderId); break;
         }
     }
 }
@@ -594,23 +597,16 @@ async function renderCustomerHomepage(contentArea) {
 
 function renderFeaturedRestaurantCard(doc) {
     const r = doc.data();
-    const firstImage = r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls[0] : 'https://placehold.co/400x250?text=UniFood';
+    const firstImage = r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls[0] : 'https://placehold.co/120x120?text=UniFood';
     
     return `
-        <div data-id="${doc.id}" data-name="${r.name}" data-cuisine="${r.cuisine}" class="restaurant-card group bg-white overflow-hidden cursor-pointer flex-shrink-0 w-80">
-            <div class="overflow-hidden">
-                <img src="${firstImage}" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300 ease-in-out">
+        <div data-id="${doc.id}" data-name="${r.name}" data-cuisine="${r.cuisine}" class="featured-restaurant-card flex-shrink-0">
+            <div class="img-container">
+                <img src="${firstImage}" alt="${r.name}">
             </div>
-            <div class="p-4">
-                <h3 class="font-bold text-lg font-serif truncate">${r.name}</h3>
-                <p class="text-sm text-gray-500 mt-1">${r.cuisine}</p>
-                <p class="text-xs text-gray-600 truncate mt-1 flex items-center"><i data-feather="map-pin" class="inline-block w-3 h-3 mr-1 flex-shrink-0"></i>${r.address || ''}</p>
-                <div class="flex items-center mt-2 text-xs text-gray-700">
-                   <i data-feather="star" class="w-4 h-4 fill-current text-yellow-500"></i>
-                   <span class="ml-1 font-bold">${(r.avgRating || 0).toFixed(1)}</span>
-                   <span class="mx-2">|</span>
-                   <span>30-40 min</span>
-                </div>
+            <div class="info mt-2">
+                <h3 class="font-semibold text-gray-800">${r.name}</h3>
+                <p class="text-sm text-gray-500">${r.cuisine}</p>
             </div>
         </div>`;
 }
@@ -961,6 +957,11 @@ function renderCustomerOrderCard(orderId, orderData) {
     const currentStatus = statusMap[orderData.status] || statusMap['placed'];
 
     let actionButtons = `<button data-action="view-bill" data-order-id="${orderId}" class="btn btn-primary py-2 px-4">View Bill</button>`;
+    
+    if (orderData.status === 'placed') {
+        actionButtons += `<button data-action="cancel-order" data-order-id="${orderId}" class="btn btn-danger ml-2 py-2 px-4" data-translate-key="cancelOrder">Cancel Order</button>`;
+    }
+
     if ((orderData.status === 'delivered' || orderData.status === 'completed') && !orderData.isReviewed) {
         actionButtons += `<button data-action="rate-order" data-order-id="${orderId}" class="btn btn-secondary ml-2 py-2 px-4">Rate Order</button>`;
     }
@@ -1101,7 +1102,6 @@ async function renderCartView() {
         </div>
     `;
     
-    // --- UPDATED BUTTON HTML ---
     const animatedButtonHtml = `
         <button type="button" class="animated-order-btn mt-6">
             <span class="btn-text">Place Order 🍕</span>
@@ -1270,6 +1270,24 @@ async function handlePlaceOrder(form) {
 }
 
 // --- UTILITY, BILLING & RATING FUNCTIONS ---
+function handleCancelOrder(orderId) {
+    showConfirmationModal(
+        "Cancel Order?",
+        "Are you sure you want to cancel this order? This action cannot be undone.",
+        async () => {
+            try {
+                await db.collection('orders').doc(orderId).update({ status: 'cancelled' });
+                await logAudit("Order Cancelled", `Order ID: ${orderId}`);
+                showToast("Order cancelled successfully.", "success");
+                // The view will update automatically due to the live listener.
+            } catch (error) {
+                console.error("Error cancelling order:", error);
+                showSimpleModal("Error", "Could not cancel the order. Please try again.");
+            }
+        }
+    );
+}
+
 function showToast(message, type = 'success') {
     const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
