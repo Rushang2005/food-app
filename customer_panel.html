@@ -121,6 +121,38 @@
             box-shadow: 0 0 12px var(--secondary-glow), 0 0 24px var(--secondary-glow);
             transform: translateY(-5px) scale(1.02);
         }
+
+        /* --- NEW: Styles for Circular Featured Restaurants --- */
+        .featured-restaurant-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 150px; /* Circle diameter */
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .featured-restaurant-card:hover {
+            transform: scale(1.05);
+        }
+        .featured-restaurant-card .img-container {
+            width: 120px; /* Image diameter */
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 3px solid white;
+        }
+        .featured-restaurant-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        .featured-restaurant-card:hover img {
+            transform: scale(1.1);
+        }
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
