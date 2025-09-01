@@ -133,7 +133,7 @@ const translations = {
         yourOrder: "आपका ऑर्डर",
         placeOrder: "ऑर्डर दें",
         close: "बंद करें",
-        unavailable: "अनुपલબ્ધ"
+        unavailable: "अनुपલબ્ध"
     }
 };
 let currentLanguage = 'en';
@@ -488,7 +488,7 @@ function handleCustomerClicks(e) {
         switch(action) {
             case 'back-to-home': renderCustomerView('home'); break;
             case 'add-to-cart': addToCart(itemId, itemName, parseFloat(itemPrice), restaurantId, restaurantName); break;
-            case 'place-order': handlePlaceOrder(actionButton.form); break;
+            // case 'place-order': handlePlaceOrder(actionButton.form); break; // Old handler removed
             case 'view-bill': renderOrderBill(orderId); break;
             case 'rate-order': showRatingForm(orderId); break;
             case 'view-item-details': renderMenuItemDetailView(itemId, restaurantId); break;
@@ -1100,6 +1100,41 @@ async function renderCartView() {
             </div>
         </div>
     `;
+    
+    // --- UPDATED BUTTON HTML ---
+    const animatedButtonHtml = `
+        <button type="button" class="animated-order-btn mt-6">
+            <span class="btn-text">Place Order 🍕</span>
+            <div class="animation-container">
+                <div class="road-lines"></div>
+                <svg class="delivery-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <g stroke="#212121" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill-rule="evenodd">
+                        <path d="M45 130 C 35 130, 30 120, 40 115 C 30 115, 25 105, 35 100 C 45 100, 50 110, 45 115 Z" fill="#E3F2FD" />
+                        <circle cx="65" cy="135" r="18" fill="#FFFFFF"/><circle cx="65" cy="135" r="8" fill="#BDBDBD"/>
+                        <circle cx="155" cy="135" r="18" fill="#FFFFFF"/><circle cx="155" cy="135" r="8" fill="#BDBDBD"/>
+                        <rect x="35" y="85" width="40" height="30" rx="5" fill="#FFD600"/>
+                        <text x="55" y="105" font-family="sans-serif" font-size="10" font-weight="bold" fill="#212121" text-anchor="middle" stroke="none">Unifoods</text>
+                        <path d="M165 118 C 158 100, 140 92, 120 92 L90 92 C 85 92 80 97 80 102 L80 115 L60 115 C 50 115 45 125 45 135 L175 135 C 175 125 173 118 165 118 Z" fill="#FFD600"/>
+                        <path d="M90 92 C 100 77, 115 72, 130 77 L145 87 L130 95 L90 92 Z" fill="#FBC02D"/>
+                        <path d="M128,78 L132,90" fill="none" stroke="#9E9E9E" stroke-width="4"/>
+                        <path d="M80 115 L120 115 Q 125 115 125 110 L 125 102 L 80 102 Z" fill="#424242" />
+                        <path d="M112 115 L112 135 L95 135 Q 90 135 90 130 L100 115 Z" fill="#37474F"/> 
+                        <path d="M88,132 L98,132 L95,140 L90,138 Z" fill="#FFFFFF" />
+                        <path d="M88,138 L96,138" fill="none" stroke="#D32F2F" stroke-width="2"/>
+                        <path d="M88,132 L98,132" fill="none" stroke="#212121" stroke-width="3"/>
+                        <path d="M112,115 L112,85 Q 112 78 118 78 L 130 85 L135 95 L120 105 Z" fill="#4DB6AC" />
+                        <path d="M112,85 L118,85" fill="none" stroke-width="1.5"/>
+                        <path d="M130,83 C 135,83 137,88 132,90 L128,83 Z" fill="#FFECB3" />
+                        <circle cx="110" cy="55" r="15" fill="#FFECB3" />
+                        <path d="M95,55 C 95,45 125,45 125,55 L 125,60 C 115,62 105,62 95,60 Z" fill="#424242" />
+                        <path d="M120,53 a 3,3 0 0,1 0,6" fill="none" stroke-width="1.5"/>
+                        <circle cx="115" cy="53" r="1.5" fill="#212121" />
+                        <path d="M112 62 Q 115 64 118 62" fill="none" stroke-width="1.5"/>
+                    </g>
+                </svg>
+            </div>
+        </button>
+    `;
 
     const cartHtml = `
         <form id="order-form">
@@ -1136,8 +1171,8 @@ async function renderCartView() {
                 </div>
             </div>
             <div class="mt-6">
-                <button type="submit" data-action="place-order" class="btn btn-primary w-full py-3 rounded-lg" data-translate-key="placeOrder">Place Order</button>
-                <button type="button" class="btn bg-gray-200 w-full py-3 rounded-lg mt-2" onclick="closeModal()" data-translate-key="close">Close</button>
+                ${animatedButtonHtml}
+                <button type="button" class="btn bg-gray-200 w-full py-3 rounded-full mt-2" onclick="closeModal()" data-translate-key="close">Close</button>
             </div>
         </form>`;
     showModal(cartHtml);
@@ -1164,24 +1199,38 @@ async function renderCartView() {
     
     document.querySelector('input[name="deliveryType"]:checked').dispatchEvent(new Event('change', { 'bubbles': true }));
     
-    document.getElementById('order-form').addEventListener('submit', e => { e.preventDefault(); handlePlaceOrder(e.target); });
+    // --- NEW: Event listener for animated button ---
+    const animatedOrderBtn = document.querySelector('.animated-order-btn');
+    if (animatedOrderBtn) {
+        animatedOrderBtn.addEventListener('click', () => {
+            const form = document.getElementById('order-form');
+            const deliverySvg = animatedOrderBtn.querySelector('.delivery-svg');
+
+            if (animatedOrderBtn.classList.contains('animating')) return;
+            
+            // Perform validation before starting animation
+            const deliveryType = form.elements.deliveryType.value;
+            const deliveryAddress = form.elements.deliveryAddress.value;
+            if (deliveryType === 'delivery' && !deliveryAddress.trim()) {
+                showSimpleModal("Address Required", "Delivery address is required for delivery orders.");
+                return;
+            }
+
+            animatedOrderBtn.classList.add('animating');
+            animatedOrderBtn.disabled = true;
+
+            deliverySvg.addEventListener('animationend', () => {
+                handlePlaceOrder(form); 
+            }, { once: true });
+        });
+    }
 }
 
 
 async function handlePlaceOrder(form) {
     const deliveryType = form.elements.deliveryType.value;
     const deliveryAddress = form.elements.deliveryAddress.value;
-
-    if (deliveryType === 'delivery' && !deliveryAddress.trim()) {
-        showSimpleModal("Address Required", "Delivery address is required for delivery orders.");
-        return;
-    }
-
     const paymentMethod = form.elements.paymentType.value;
-    if (!paymentMethod) {
-        showSimpleModal("Payment Method Required", "Please select a payment method.");
-        return;
-    }
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = deliveryType === 'delivery' ? ((siteSettings.deliveryChargeType === 'fixed') ? siteSettings.deliveryCharge : subtotal * (siteSettings.deliveryCharge / 100)) : 0;
@@ -1210,6 +1259,13 @@ async function handlePlaceOrder(form) {
     } catch (error) {
         console.error("Error placing order: ", error);
         showSimpleModal('Order Error', 'There was an error placing your order. Please try again.');
+        
+        // --- NEW: Reset button on failure ---
+        const animatedOrderBtn = document.querySelector('.animated-order-btn');
+        if (animatedOrderBtn) {
+            animatedOrderBtn.classList.remove('animating');
+            animatedOrderBtn.disabled = false;
+        }
     }
 }
 
@@ -1453,3 +1509,4 @@ function getAiResponse(message) {
 }
 
 feather.replace();
+
