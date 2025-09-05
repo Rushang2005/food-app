@@ -44,10 +44,6 @@ const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 
 
 // --- CORE APP LOGIC ---
-
-
-// REPLACE the existing initializeApp function in admin_panel.js with this one:
-
 async function initializeApp() {
     // 1. Fetch settings ONCE for the initial page load.
     const settingsDoc = await db.collection('settings').doc('config').get();
@@ -129,7 +125,6 @@ function setupMobileMenuHandlers() {
     mobileLogoutBtn.addEventListener('click', () => auth.signOut());
 }
 
-// REPLACE the existing applySiteSettings function in admin_panel.js with this one:
 
 function applySiteSettings() {
     // Safely access the nested theme object
@@ -318,6 +313,14 @@ function handleAdminClicks(e) {
             case 'start-scan': startScanner(); break;
             case 'stop-scan': stopScanner(); break;
             case 'handle-cancellation': handleCancellationRequest(requestId, decision); break;
+            case 'add-advertisement': showAdvertisementForm(); break;
+            case 'edit-advertisement': showAdvertisementForm(id); break;
+            case 'delete-advertisement': handleDeleteAdvertisement(id); break;
+            case 'change-admin-password':
+                auth.sendPasswordResetEmail(currentUser.email)
+                    .then(() => showToast('Password reset email sent!'))
+                    .catch(err => showToast(`Error: ${err.message}`, 'error'));
+                break;
         }
     }
 }
@@ -341,6 +344,8 @@ function renderAdminView(viewName, contentArea = document.getElementById('admin-
         case 'users': renderAdminUsersView(contentArea); break;
         case 'delivery-boys': renderDeliveryBoysView(contentArea); break;
         case 'reviews': renderAllReviewsView(contentArea); break;
+        case 'advertisements': renderAdvertisementsView(contentArea); break;
+        case 'profile': renderAdminProfileView(contentArea); break;
         case 'scan-order': renderScannerView(contentArea); break;
     }
 }
@@ -636,7 +641,8 @@ async function processRestaurantCreation(data) {
             imageUrls: data.imageUrls,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             avgRating: 0,
-            ratingCount: 0
+            ratingCount: 0,
+            displayPriority: 99
         });
 
         await db.collection('users').doc(ownerUid).set({
@@ -763,6 +769,11 @@ async function showEditRestaurantForm(restaurantId) {
                 <input type="tel" name="mobile" class="input-field w-full" value="${restaurant.mobile || ''}" required>
             </div>
             <div>
+                <label class="block text-sm font-medium">Display Priority</label>
+                <input type="number" name="displayPriority" class="input-field w-full" value="${restaurant.displayPriority || 99}" placeholder="e.g., 1, 2, 3 (lower is higher priority)">
+                <p class="text-xs text-gray-500 mt-1">Restaurants with lower numbers (like 1) appear first.</p>
+            </div>
+            <div>
                 <label class="block text-sm font-medium">Image URLs</label>
                 <textarea name="imageUrls" class="input-field w-full" rows="3" placeholder="Paste image URLs, one per line">${(restaurant.imageUrls || []).join('\n')}</textarea>
                 <div id="image-preview-container" class="mt-2 flex flex-wrap gap-2"></div>
@@ -805,6 +816,7 @@ async function handleUpdateRestaurant(e) {
         cuisine: form.elements.cuisine.value,
         address: form.elements.address.value,
         mobile: form.elements.mobile.value,
+        displayPriority: parseInt(form.elements.displayPriority.value, 10) || 99,
         imageUrls: form.elements.imageUrls.value.split('\n').filter(url => url.trim() !== ''),
     };
     await db.collection('restaurants').doc(restaurantId).update(updatedData);
@@ -896,7 +908,6 @@ async function renderAdminMenuManagementView(restaurantId) {
     unsubscribeListeners.push(unsub);
 }
 
-// REPLACE the existing renderMenuItemCard function in admin_panel.js with this one:
 
 function renderMenuItemCard(doc, restaurantId) {
     const item = doc.data();
@@ -924,7 +935,6 @@ function renderMenuItemCard(doc, restaurantId) {
     `;
 }
 
-// REPLACE the existing showMenuItemForm function in admin_panel.js with this one:
 
 async function showMenuItemForm(restaurantId, itemId = null) {
     const isEditing = itemId !== null;
@@ -1436,15 +1446,223 @@ async function renderOrderBill(orderId, targetContainer = null) {
     });
 }
 function downloadBillAsPDF(orderId) {
-            const element = document.getElementById('printable-bill');
-            const opt = {
-              margin:       0.5,
-              filename:     `UniFood_Invoice_${orderId.substring(0,8)}.pdf`,
-              image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2, useCORS: true },
-              jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-            html2pdf().from(element).set(opt).save();
+    const element = document.getElementById('printable-bill');
+    const opt = {
+      margin:       0.5,
+      filename:     `UniFood_Invoice_${orderId.substring(0,8)}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().from(element).set(opt).save();
+}
+
+// ----- NEW ADVERTISEMENT MANAGEMENT FUNCTIONS -----
+
+// RENAME and REWRITE renderSettingsView to renderAdvertisementsView
+async function renderAdvertisementsView(contentArea) {
+    contentArea.innerHTML = `
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold font-serif">Manage Advertisements</h2>
+            <button data-action="add-advertisement" class="btn btn-primary rounded-lg py-2 px-4 flex items-center gap-2">
+                <i data-feather="plus" class="w-5 h-5"></i> Add Advertisement
+            </button>
+        </div>
+        <div id="advertisements-list" class="space-y-4"></div>
+    `;
+    feather.replace();
+
+    const listEl = document.getElementById('advertisements-list');
+    listEl.innerHTML = '<p>Loading advertisements...</p>';
+
+    // Fetch all documents from the new 'advertisements' collection
+    const snapshot = await db.collection('advertisements').orderBy('createdAt', 'desc').get();
+
+    if (snapshot.empty) {
+        listEl.innerHTML = '<p class="text-center bg-white p-6 rounded-lg shadow-md">No advertisements have been created yet.</p>';
+        return;
+    }
+
+    // Fetch all restaurant names for mapping
+    const restaurantsSnapshot = await db.collection('restaurants').get();
+    const restaurantMap = new Map(restaurantsSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+
+    listEl.innerHTML = snapshot.docs.map(doc => {
+        const ad = doc.data();
+        const restaurantName = restaurantMap.get(ad.restaurantId) || 'Unknown Restaurant';
+        const statusClass = ad.isEnabled ? 'text-green-600 bg-green-100' : 'text-gray-600 bg-gray-100';
+        const statusText = ad.isEnabled ? 'Enabled' : 'Disabled';
+
+        return `
+            <div class="bg-white p-4 rounded-xl shadow-md flex items-center gap-4">
+                <img src="${ad.imageUrl || 'https://placehold.co/150x75?text=Ad'}" class="w-40 h-20 object-cover rounded-md border" onerror="this.src='https://placehold.co/150x75?text=Invalid'">
+                <div class="flex-grow">
+                    <p><strong>Links to:</strong> ${restaurantName}</p>
+                    <p class="text-sm"><strong>Status:</strong> <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">${statusText}</span></p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button data-action="edit-advertisement" data-id="${doc.id}" class="btn bg-gray-200 p-2 rounded-md"><i data-feather="edit-2" class="w-4 h-4"></i></button>
+                    <button data-action="delete-advertisement" data-id="${doc.id}" class="btn bg-red-100 text-red-600 p-2 rounded-md"><i data-feather="trash" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    feather.replace();
+}
+
+// NEW function to show a modal form for adding/editing an ad
+async function showAdvertisementForm(adId = null) {
+    const isEditing = adId !== null;
+    let adData = { imageUrl: '', restaurantId: '', isEnabled: true };
+
+    if (isEditing) {
+        const adDoc = await db.collection('advertisements').doc(adId).get();
+        if (adDoc.exists) {
+            adData = adDoc.data();
+        }
+    }
+
+    const restaurantsSnapshot = await db.collection('restaurants').get();
+    const restaurantOptions = restaurantsSnapshot.docs.map(doc => {
+        return `<option value="${doc.id}" ${doc.id === adData.restaurantId ? 'selected' : ''}>${doc.data().name}</option>`;
+    }).join('');
+
+    const formHtml = `
+        <form id="ad-form" class="space-y-4">
+            <h3 class="text-2xl font-bold font-serif mb-4">${isEditing ? 'Edit Advertisement' : 'Add New Advertisement'}</h3>
+            <input type="hidden" name="adId" value="${adId || ''}">
+            <div>
+                <label class="block text-sm font-medium">Advertisement Image URL</label>
+                <input type="url" name="imageUrl" class="input-field w-full" placeholder="https://example.com/ad.jpg" value="${adData.imageUrl}" required>
+                <img id="ad-image-preview" src="${adData.imageUrl || 'https://placehold.co/600x150?text=Ad+Preview'}" class="mt-2 w-full h-auto object-cover rounded-md border" onerror="this.src='https://placehold.co/600x150?text=Invalid+URL'"/>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Link to Restaurant</label>
+                <select name="restaurantId" class="input-field w-full" required>
+                    <option value="">-- Select a Restaurant --</option>
+                    ${restaurantOptions}
+                </select>
+            </div>
+            <div>
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" name="isEnabled" class="form-checkbox h-5 w-5 text-blue-600" ${adData.isEnabled ? 'checked' : ''}>
+                    <span class="ml-3 text-gray-700 font-medium">Enable this advertisement</span>
+                </label>
+            </div>
+            <div class="flex justify-end gap-4 pt-4">
+                <button type="button" class="btn bg-gray-200" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Advertisement</button>
+            </div>
+        </form>
+    `;
+    showModal(formHtml);
+
+    document.querySelector('#ad-form input[name="imageUrl"]').addEventListener('input', (e) => {
+        document.getElementById('ad-image-preview').src = e.target.value || 'https://placehold.co/600x150?text=Ad+Preview';
+    });
+
+    document.getElementById('ad-form').addEventListener('submit', handleSaveAdvertisement);
+}
+
+// NEW handler for the add/edit form submission
+async function handleSaveAdvertisement(e) {
+    e.preventDefault();
+    const form = e.target;
+    const adId = form.elements.adId.value;
+    const isEditing = adId !== '';
+
+    const adData = {
+        imageUrl: form.elements.imageUrl.value,
+        restaurantId: form.elements.restaurantId.value,
+        isEnabled: form.elements.isEnabled.checked,
+    };
+
+    try {
+        if (isEditing) {
+            await db.collection('advertisements').doc(adId).update(adData);
+            await logAudit('Advertisement Updated', `ID: ${adId}`);
+            showToast('Advertisement updated successfully!');
+        } else {
+            adData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('advertisements').add(adData);
+            await logAudit('Advertisement Created', `Image: ${adData.imageUrl}`);
+            showToast('New advertisement added successfully!');
+        }
+        closeModal();
+        renderAdvertisementsView(document.getElementById('admin-content-area'));
+    } catch (error) {
+        console.error("Error saving advertisement:", error);
+        showToast('Failed to save advertisement.', 'error');
+    }
+}
+
+// NEW delete handler for a specific advertisement
+function handleDeleteAdvertisement(adId) {
+    showConfirmationModal(
+        "Delete Advertisement?",
+        "Are you sure you want to permanently delete this advertisement? This action cannot be undone.",
+        async () => {
+            try {
+                await db.collection('advertisements').doc(adId).delete();
+                await logAudit('Advertisement Deleted', `ID: ${adId}`);
+                showToast('Advertisement deleted successfully!', 'success');
+                renderAdvertisementsView(document.getElementById('admin-content-area'));
+            } catch (error) {
+                console.error("Error deleting advertisement:", error);
+                showToast('Failed to delete advertisement.', 'error');
+            }
+        }
+    );
+}
+
+
+async function renderAdminProfileView(contentArea) {
+    contentArea.innerHTML = `
+        <h2 class="text-3xl font-bold font-serif mb-6">My Profile</h2>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <form id="admin-profile-form" class="space-y-4">
+                <div>
+                    <label for="profile-name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" id="profile-name" class="input-field mt-1 block w-full" value="${currentUser.name}" required>
+                </div>
+                 <div>
+                    <label for="profile-email" class="block text-sm font-medium text-gray-700">Email (Cannot be changed)</label>
+                    <input type="email" id="profile-email" class="input-field mt-1 block w-full bg-gray-200" value="${currentUser.email}" disabled>
+                </div>
+                <button type="submit" class="btn btn-primary py-2 px-6 rounded-lg">Update Profile</button>
+            </form>
+            
+            <div class="mt-6 border-t pt-6">
+                 <h3 class="text-lg font-semibold">Security</h3>
+                 <p class="text-sm text-gray-600 mt-1">To change your password, a reset link will be sent to your email address.</p>
+                 <button data-action="change-admin-password" class="btn btn-secondary text-sm mt-2 py-2 px-4">Send Password Reset Email</button>
+            </div>
+        </div>
+    `;
+    
+    feather.replace();
+
+    document.getElementById('admin-profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newName = document.getElementById('profile-name').value;
+        if (newName.trim() === '') {
+            showToast('Name cannot be empty.', 'error');
+            return;
+        }
+
+        try {
+            await db.collection('users').doc(currentUser.uid).update({ name: newName });
+            currentUser.name = newName; // Update local cache
+            const userHtml = `<p class="font-semibold">${currentUser.name}</p><p class="text-xs text-gray-500 capitalize">${currentUser.role}</p>`;
+            userInfo.innerHTML = userHtml;
+            mobileUserInfo.innerHTML = userHtml;
+            showToast('Profile updated successfully!');
+            await logAudit('Profile Updated', `Admin user ${currentUser.email} updated their name.`);
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            showToast('Failed to update profile.', 'error');
+        }
+    });
 }
 
 // --- NEW: Toast Notification Function ---
