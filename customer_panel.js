@@ -13,135 +13,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- TRANSLATIONS ---
-const translations = {
-    en: {
-        maintenanceTitle: "Under Maintenance",
-        maintenanceText: "We are currently performing maintenance. Please check back later.",
-        logout: "Logout",
-        language: "Language",
-        aiAssistant: "UniFood AI Assistant",
-        aiGreeting: "Hello! How can I help you today?",
-        askAnythingPlaceholder: "Ask me anything...",
-        welcomeBack: "Welcome Back",
-        signInPrompt: "Sign in to get your food.",
-        emailLabel: "Email",
-        passwordLabel: "Password",
-        login: "Login",
-        dontHaveAccount: "Don't have an account?",
-        signUp: "Sign Up",
-        createAccount: "Create Account",
-        signUpPrompt: "Join us for a delicious journey.",
-        fullNamePlaceholder: "Full Name",
-        mobileNumberPlaceholder: "Mobile Number",
-        emailPlaceholder: "Email Address",
-        passwordPlaceholder: "Password (min. 6 characters)",
-        alreadyHaveAccount: "Already have an account?",
-        menu: "Menu",
-        home: "Home",
-        myOrders: "My Orders",
-        profile: "Profile",
-        findYourNextMeal: "Find Your Next Meal",
-        heroSubtitle: "The best restaurants, delivered to your doorstep.",
-        searchPlaceholder: "Search for restaurants or cuisines...",
-        justForYou: "Just For You ✨",
-        aiRecommendationsPlaceholder: "AI recommendations will appear here based on your order history.",
-        backToRestaurants: "Back to Restaurants",
-        addToCart: "Add to Cart",
-        myProfile: "My Profile",
-        updateProfile: "Update Profile",
-        yourOrder: "Your Order",
-        placeOrder: "Place Order",
-        close: "Close",
-        unavailable: "Unavailable",
-        cancelOrder: "Cancel Order"
-    },
-    gu: {
-        maintenanceTitle: "જાળવણી હેઠળ",
-        maintenanceText: "અમે હાલમાં જાળવણી કરી રહ્યા છીએ. કૃપા કરીને પછીથી ફરી તપાસ કરો.",
-        logout: "લૉગઆઉટ",
-        language: "ભાષા",
-        aiAssistant: "યુનિફૂડ AI સહાયક",
-        aiGreeting: "નમસ્તે! આજે હું તમારી શી રીતે મદદ કરી શકું?",
-        askAnythingPlaceholder: "મને કંઈપણ પૂછો...",
-        welcomeBack: "ફરી સ્વાગત છે",
-        signInPrompt: "તમારું ભોજન મેળવવા માટે સાઇન ઇન કરો.",
-        emailLabel: "ઈમેલ",
-        passwordLabel: "પાસવર્ડ",
-        login: "લૉગિન",
-        dontHaveAccount: "ખાતું નથી?",
-        signUp: "સાઇન અપ કરો",
-        createAccount: "એકાઉન્ટ બનાવો",
-        signUpPrompt: "એક સ્વાદિષ્ટ પ્રવાસ માટે અમારી સાથે જોડાઓ.",
-        fullNamePlaceholder: "પૂરું નામ",
-        mobileNumberPlaceholder: "મોબાઇલ નંબર",
-        emailPlaceholder: "ઈમેલ સરનામું",
-        passwordPlaceholder: "પાસવર્ડ (ઓછામાં ઓછા 6 અક્ષરો)",
-        alreadyHaveAccount: "પહેલેથી એકાઉન્ટ છે?",
-        menu: "મેનુ",
-        home: "હોમ",
-        myOrders: "મારા ઓર્ડર્સ",
-        profile: "પ્રોફાઇલ",
-        findYourNextMeal: "તમારું આગલું ભોજન શોધો",
-        heroSubtitle: "શ્રેષ્ઠ રેસ્ટોરન્ટ્સ, તમારા ઘર સુધી પહોંચાડવામાં આવે છે.",
-        searchPlaceholder: "રેસ્ટોરન્ટ્સ અથવા વાનગીઓ શોધો...",
-        justForYou: "ફક્ત તમારા માટે ✨",
-        aiRecommendationsPlaceholder: "તમારા ઓર્ડર ઇતિહાસના આધારે AI ભલામણો અહીં દેખાશે.",
-        backToRestaurants: "રેસ્ટોરન્ટ્સ પર પાછા જાઓ",
-        addToCart: "કાર્ટમાં ઉમેરો",
-        myProfile: "મારી પ્રોફાઇલ",
-        updateProfile: "પ્રોફાઇલ અપડેટ કરો",
-        yourOrder: "તમારો ઓર્ડર",
-        placeOrder: "ઓર્ડર આપો",
-        close: "બંધ કરો",
-        unavailable: "અનુપલબ્ધ",
-        cancelOrder: "ઓર્ડર રદ કરો"
-    },
-    hi: {
-        maintenanceTitle: "रखरखाव હેઠળ",
-        maintenanceText: "हम वर्तमान में रखरखाव का काम कर रहे हैं। कृपया बाद में वापस देखें।",
-        logout: "लॉग आउट",
-        language: "भाषा",
-        aiAssistant: "यूनिफूड एआई सहायक",
-        aiGreeting: "नमस्ते! आज मैं आपकी कैसे मदद कर सकता हूँ?",
-        askAnythingPlaceholder: "मुझसे कुछ भी पूछें...",
-        welcomeBack: "वापसी पर स्वागत है",
-        signInPrompt: "अपना भोजन पाने के लिए साइन इन करें।",
-        emailLabel: "ईमेल",
-        passwordLabel: "पासवर्ड",
-        login: "लॉग इन करें",
-        dontHaveAccount: "खाता नहीं है?",
-        signUp: "साइन अप करें",
-        createAccount: "खाता बनाएं",
-        signUpPrompt: "एक स्वादिष्ट यात्रा के लिए हमसे जुड़ें।",
-        fullNamePlaceholder: "पूरा नाम",
-        mobileNumberPlaceholder: "मोबाइल नंबर",
-        emailPlaceholder: "ईमेल पता",
-        passwordPlaceholder: "पासवर्ड (न्यूनतम 6 अक्षर)",
-        alreadyHaveAccount: "पहले से ही एक खाता है?",
-        menu: "मेन्यू",
-        home: "હોમ",
-        myOrders: "मेरे आर्डर",
-        profile: "प्रोफ़ाइल",
-        findYourNextMeal: "अपना अगला भोजन खोजें",
-        heroSubtitle: "सर्वश्रेष्ठ रेस्तरां, आपके दरवाजे पर पहुंचाए जाते हैं।",
-        searchPlaceholder: "रेस्तरां या व्यंजन खोजें...",
-        justForYou: "सिर्फ आपके लिए ✨",
-        aiRecommendationsPlaceholder: "आपके ऑर्डर इतिहास के आधार पर एआई सिफारिशें यहां दिखाई देंगी।",
-        backToRestaurants: "रेस्तरां पर वापस जाएं",
-        addToCart: "कार्ट में जोड़ें",
-        myProfile: "मेरी प्रोफाइल",
-        updateProfile: "प्रोफ़ाइल अपडेट करें",
-        yourOrder: "आपका ऑर्डर",
-        placeOrder: "ऑर्डर दें",
-        close: "बंद करें",
-        unavailable: "अनुपલબ્ધ",
-        cancelOrder: "ऑर्डर रद्द करें"
-    }
-};
-let currentLanguage = 'en';
-
-
 // --- GLOBAL STATE & EVENT HANDLERS ---
 let currentUser = null;
 let unsubscribeListeners = [];
@@ -151,6 +22,7 @@ let cart = [];
 let html5QrCode = null;
 let allRestaurantsCache = []; // Cache for search
 let allMenuItemsCache = []; // Cache for search
+let adSliderInterval = null; // For advertisement slider
 
 
 // --- UI REFERENCES ---
@@ -178,36 +50,7 @@ const closeMobileMenuButton = document.getElementById('close-mobile-menu');
 const mobileUserInfo = document.getElementById('mobile-user-info');
 const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 
-
-// --- LANGUAGE & UI TEXT FUNCTIONS ---
-function updateUIText() {
-    document.querySelectorAll('[data-translate-key]').forEach(el => {
-        const key = el.dataset.translateKey;
-        const translation = translations[currentLanguage]?.[key] || translations['en'][key];
-        if (translation) {
-            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                el.placeholder = translation;
-            } else {
-                el.textContent = translation;
-            }
-        }
-    });
-    feather.replace(); 
-}
-
-function setLanguage(lang) {
-    if (translations[lang]) {
-        currentLanguage = lang;
-        localStorage.setItem('unifood-lang', lang);
-        document.getElementById('language-switcher').value = lang;
-        document.getElementById('mobile-language-switcher').value = lang;
-        updateUIText();
-    }
-}
-
-
 // --- CORE APP & AUTH LOGIC ---
-// --- REPLACE THE ENTIRE initializeApp FUNCTION ---
 async function initializeApp() {
     // 1. Fetch settings ONCE for the initial page load.
     const settingsDoc = await db.collection('settings').doc('config').get();
@@ -215,12 +58,6 @@ async function initializeApp() {
         siteSettings = settingsDoc.data();
     }
     applySiteSettings();
-
-    const savedLang = localStorage.getItem('unifood-lang') || 'en';
-    setLanguage(savedLang);
-
-    document.getElementById('language-switcher').addEventListener('change', (e) => setLanguage(e.target.value));
-    document.getElementById('mobile-language-switcher').addEventListener('change', (e) => setLanguage(e.target.value));
 
     // 2. The onAuthStateChanged will now handle the real-time listener.
     auth.onAuthStateChanged(async (user) => {
@@ -280,9 +117,9 @@ async function initializeApp() {
                 showView('auth');
             }
         }
-        updateUIText();
     });
 }
+
 
 function logAudit(action, details) {
     if (!currentUser) return;
@@ -367,7 +204,6 @@ function loadPortal(user) {
     } else {
         mainContent.innerHTML = `<p class="text-center text-red-500">Error: Portal template for role "${user.role}" not found.</p>`;
     }
-    updateUIText();
 }
 
 function renderAuthForm(formType) {
@@ -377,7 +213,6 @@ function renderAuthForm(formType) {
     if (template) {
         authCard.appendChild(template.content.cloneNode(true));
     }
-    updateUIText();
 
     if (formType === 'login') {
         document.getElementById('login-form').addEventListener('submit', handleLogin);
@@ -470,6 +305,12 @@ function handleCustomerClicks(e) {
         return;
     }
 
+    const advertisementCard = e.target.closest('.advertisement-card');
+    if (advertisementCard) {
+        renderCustomerRestaurantView(advertisementCard.dataset.id);
+        return;
+    }
+
     const restaurantCard = e.target.closest('.restaurant-card, .featured-restaurant-card');
     if (restaurantCard) {
         renderCustomerRestaurantView(restaurantCard.dataset.id);
@@ -512,32 +353,33 @@ function renderCustomerView(viewName) {
         case 'orders': renderCustomerOrdersView(contentArea); break;
         case 'profile': renderCustomerProfile(contentArea); break;
     }
-    updateUIText();
 }
 
 async function renderCustomerHomepage(contentArea) {
-     cartButton.classList.remove('hidden');
-     
-     const cuisines = [
+    cartButton.classList.remove('hidden');
+
+    const cuisines = [
         { name: 'Pizza', icon: 'disc' }, { name: 'Burger', icon: 'minus-circle' },
         { name: 'Indian', icon: 'sunrise' }, { name: 'Chinese', icon: 'wind' },
         { name: 'Italian', icon: 'flag' }, { name: 'Mexican', icon: 'hash' }
-     ];
-     
-     const cuisineHtml = cuisines.map(c => `
+    ];
+
+    const cuisineHtml = cuisines.map(c => `
         <div data-cuisine-filter="${c.name}" class="text-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all cursor-pointer">
             <i data-feather="${c.icon}" class="w-8 h-8 mx-auto text-gray-600"></i>
             <p class="mt-2 font-semibold text-sm">${c.name}</p>
         </div>
-     `).join('');
-     
-     contentArea.innerHTML = `
+    `).join('');
+
+    contentArea.innerHTML = `
         <div id="homepage-content" class="space-y-12">
             <div>
                 <h3 class="text-2xl font-bold font-serif mb-4">Categories</h3>
                 <div class="grid grid-cols-3 md:grid-cols-6 gap-4">${cuisineHtml}</div>
             </div>
             
+            <div id="advertisement-container" class="my-8"></div>
+
             <div id="featured-restaurants-container">
                 <h3 class="text-2xl font-bold font-serif mb-4">Top Rated Restaurants</h3>
                 <div id="featured-restaurants-list" class="flex overflow-x-auto gap-6 pb-4"></div>
@@ -550,26 +392,65 @@ async function renderCustomerHomepage(contentArea) {
         </div>
         <div id="search-results-container" class="hidden"></div>`;
 
-     const allListEl = document.getElementById('all-restaurants-list');
-     const featuredListEl = document.getElementById('featured-restaurants-list');
-     
+    // Fetch and display ALL enabled advertisements with a beautiful carousel
+    const adContainer = document.getElementById('advertisement-container');
+    // Stop any previous slider animation
+    clearInterval(adSliderInterval);
+
+    db.collection('advertisements').where('isEnabled', '==', true).get().then(snapshot => {
+        if (!snapshot.empty) {
+            const adsHtml = snapshot.docs.map(doc => {
+                const adData = doc.data();
+                // Note: the class is changed to just 'advertisement-card' for the carousel logic
+                return `
+                    <div data-id="${adData.restaurantId}" class="advertisement-card">
+                        <img src="${adData.imageUrl}" alt="Advertisement">
+                    </div>
+                `;
+            }).join('');
+
+            // New HTML structure for the carousel
+            adContainer.innerHTML = `
+                <h3 class="text-2xl font-bold font-serif mb-4">Special Offers</h3>
+                <div class="advertisement-carousel-wrapper">
+                    ${adsHtml}
+                </div>
+                <div class="carousel-dots"></div>
+            `;
+
+            // Start the carousel animation only if there is more than one advertisement
+            if (snapshot.docs.length > 1) {
+                startAdvertisementCarousel();
+            } else if (snapshot.docs.length === 1) {
+                // If only one ad, just make it active and visible
+                document.querySelector('.advertisement-card').classList.add('active');
+            }
+
+        } else {
+            adContainer.innerHTML = ''; // Clear the container if no ads are found
+        }
+    });
+
+    const allListEl = document.getElementById('all-restaurants-list');
+    const featuredListEl = document.getElementById('featured-restaurants-list');
+
     allRestaurantsCache = [];
     allMenuItemsCache = [];
 
     const snapshot = await db.collection('restaurants').where("isLocked", "==", false).get();
-    
+
     if (snapshot.empty) {
         allListEl.innerHTML = '<p>No restaurants available right now.</p>';
         featuredListEl.innerHTML = '<p>No featured restaurants.</p>';
         feather.replace();
         return;
     }
-    
+
     const menuPromises = [];
     snapshot.docs.forEach(doc => {
         const restaurantData = { id: doc.id, ...doc.data() };
         allRestaurantsCache.push(restaurantData);
-        
+
         const menuPromise = db.collection('restaurants').doc(doc.id).collection('menu').get().then(menuSnapshot => {
             menuSnapshot.forEach(menuDoc => {
                 allMenuItemsCache.push({
@@ -584,16 +465,86 @@ async function renderCustomerHomepage(contentArea) {
     });
 
     await Promise.all(menuPromises);
+
+    // Sorting Logic: 1. By displayPriority (ascending), 2. By avgRating (descending)
+    allRestaurantsCache.sort((a, b) => {
+        const priorityA = a.displayPriority || 99;
+        const priorityB = b.displayPriority || 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return (b.avgRating || 0) - (a.avgRating || 0);
+    });
     
-    const sortedRestaurants = [...allRestaurantsCache].sort((a, b) => (b.avgRating || 0) - (a.avgRating || 0));
-    const featuredRestaurants = sortedRestaurants.slice(0, 5);
-    
+    const featuredRestaurants = [...allRestaurantsCache].sort((a,b) => (b.avgRating || 0) - (a.avgRating || 0)).slice(0, 5);
+
     featuredListEl.innerHTML = featuredRestaurants.map(r => renderFeaturedRestaurantCard({ id: r.id, data: () => r })).join('');
     allListEl.innerHTML = allRestaurantsCache.map(r => renderRestaurantCard({ id: r.id, data: () => r })).join('');
-    
+
     feather.replace();
-    updateUIText();
 }
+
+/**
+ * Initializes a beautiful, modern carousel for the advertisements.
+ */
+function startAdvertisementCarousel() {
+    const wrapper = document.querySelector('.advertisement-carousel-wrapper');
+    const dotsContainer = document.querySelector('.carousel-dots');
+    if (!wrapper || !dotsContainer) return;
+
+    const cards = Array.from(wrapper.querySelectorAll('.advertisement-card'));
+    const totalCards = cards.length;
+    let currentIndex = 0;
+
+    // Create navigation dots
+    dotsContainer.innerHTML = cards.map((_, index) => `<div class="dot" data-index="${index}"></div>`).join('');
+    const dots = dotsContainer.querySelectorAll('.dot');
+
+    const updateCarousel = (newIndex) => {
+        currentIndex = newIndex;
+
+        cards.forEach((card, index) => {
+            card.classList.remove('active', 'prev', 'next', 'hidden-prev', 'hidden-next');
+            dots[index].classList.remove('active');
+
+            if (index === currentIndex) {
+                card.classList.add('active');
+                dots[index].classList.add('active');
+            } else if (index === (currentIndex - 1 + totalCards) % totalCards) {
+                card.classList.add('prev');
+            } else if (index === (currentIndex + 1) % totalCards) {
+                card.classList.add('next');
+            } else if (index < currentIndex) {
+                card.classList.add('hidden-prev');
+            } else {
+                card.classList.add('hidden-next');
+            }
+        });
+    };
+    
+    // Set up auto-play
+    const autoPlay = () => {
+        const nextIndex = (currentIndex + 1) % totalCards;
+        updateCarousel(nextIndex);
+    };
+
+    adSliderInterval = setInterval(autoPlay, 4000); // Slide every 4 seconds
+
+    // Add click events to dots
+    dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+            const newIndex = parseInt(dot.dataset.index);
+            updateCarousel(newIndex);
+            // Reset interval on manual navigation
+            clearInterval(adSliderInterval);
+            adSliderInterval = setInterval(autoPlay, 5000); // Restart with a slightly longer delay
+        });
+    });
+
+    // Initialize the carousel to the first slide
+    updateCarousel(0);
+}
+
 
 function renderFeaturedRestaurantCard(doc) {
     const r = doc.data();
@@ -744,8 +695,6 @@ function searchRestaurantsAndFood(searchTerm) {
 }
 
 
-// REPLACE the existing renderCustomerRestaurantView function in customer_panel.js with this one:
-
 async function renderCustomerRestaurantView(restaurantId) {
     const contentArea = document.getElementById('customer-main-content');
     contentArea.innerHTML = `<p>Loading restaurant...</p>`;
@@ -813,7 +762,7 @@ async function renderCustomerRestaurantView(restaurantId) {
                     <div class="flex justify-between items-center py-2 border-t mt-2">
                         <div><p class="font-semibold">${v.name || item.name}</p><p class="font-bold text-lg">₹${v.price}</p></div>
                         <button data-action="add-to-cart" data-item-id="${doc.id}-${v.name}" data-item-name="${cartItemName}" data-item-price="${v.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="${desktopButtonClasses}" ${!isAvailable ? 'disabled' : ''}>
-                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span>Add to Cart</span></button>
                     </div>`;
                 }).join('');
             } else {
@@ -821,7 +770,7 @@ async function renderCustomerRestaurantView(restaurantId) {
                     <div class="flex items-center justify-between mt-2">
                          <p class="font-bold text-xl text-gray-800">₹${variants[0].price}</p>
                          <button data-action="add-to-cart" data-item-id="${doc.id}" data-item-name="${item.name}" data-item-price="${variants[0].price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" class="${desktopButtonClasses}" ${!isAvailable ? 'disabled' : ''}>
-                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+                            <i data-feather="plus" class="w-5 h-5 hidden md:inline-block"></i><span>Add to Cart</span></button>
                     </div>`;
             }
             const desktopCard = `
@@ -841,7 +790,7 @@ async function renderCustomerRestaurantView(restaurantId) {
 
     contentArea.innerHTML = `
         <div>
-            <button data-action="back-to-home" class="btn bg-white mb-4 flex items-center gap-2"><i data-feather="arrow-left"></i><span data-translate-key="backToRestaurants">Back to Restaurants</span></button>
+            <button data-action="back-to-home" class="btn bg-white mb-4 flex items-center gap-2"><i data-feather="arrow-left"></i><span>Back to Restaurants</span></button>
             <div class="bg-white rounded-xl shadow-md p-6">
                 <div class="flex items-center">
                     <h2 class="text-3xl md:text-4xl font-bold font-serif">${restaurant.name}</h2>
@@ -850,13 +799,12 @@ async function renderCustomerRestaurantView(restaurantId) {
                 <p class="text-gray-600 mt-1">${restaurant.cuisine}</p>
                 <p class="text-gray-500 mt-2 flex items-center"><i data-feather="map-pin" class="w-4 h-4 mr-2 flex-shrink-0"></i><span>${restaurant.address || ''}</span></p>
                 <div class="mt-6">
-                    <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="menu">Menu</h3>
+                    <h3 class="text-2xl font-bold font-serif mb-4">Menu</h3>
                     <div class="grid grid-cols-2 md:grid-cols-1 gap-4">${menuHtml}</div>
                 </div>
             </div>
         </div>`;
     feather.replace();
-    updateUIText();
 }
 
 async function renderMenuItemDetailView(itemId, restaurantId) {
@@ -887,7 +835,7 @@ async function renderMenuItemDetailView(itemId, restaurantId) {
                 <button 
                     data-action="add-to-cart" data-item-id="${itemId}-${v.name}" data-item-name="${item.name} (${v.name})" data-item-price="${v.price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" 
                     class="${buttonClasses}" ${!isAvailable ? 'disabled' : ''}>
-                    <i data-feather="plus" class="w-5 h-5"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+                    <i data-feather="plus" class="w-5 h-5"></i><span>Add to Cart</span></button>
             </div>`).join('');
     } else {
         pricingHtml = `
@@ -896,7 +844,7 @@ async function renderMenuItemDetailView(itemId, restaurantId) {
                  <button 
                     data-action="add-to-cart" data-item-id="${itemId}" data-item-name="${item.name}" data-item-price="${variants[0].price}" data-restaurant-id="${restaurantId}" data-restaurant-name="${restaurant.name}" 
                     class="${buttonClasses} py-3 px-6" ${!isAvailable ? 'disabled' : ''}>
-                    <i data-feather="plus" class="w-5 h-5"></i><span data-translate-key="addToCart">Add to Cart</span></button>
+                    <i data-feather="plus" class="w-5 h-5"></i><span>Add to Cart</span></button>
             </div>`;
     }
 
@@ -911,7 +859,7 @@ async function renderMenuItemDetailView(itemId, restaurantId) {
             </div>
             <div class="flex flex-col h-full">
                 <h2 class="text-3xl font-bold font-serif">${item.name}</h2>
-                ${!isAvailable ? '<p class="text-red-500 font-semibold mt-2" data-translate-key="unavailable">Currently Unavailable</p>' : ''}
+                ${!isAvailable ? '<p class="text-red-500 font-semibold mt-2">Currently Unavailable</p>' : ''}
                 <p class="text-gray-600 mt-2 flex-grow">${item.description || 'No description available.'}</p>
                 <div class="mt-4">
                     ${pricingHtml}
@@ -927,7 +875,7 @@ async function renderMenuItemDetailView(itemId, restaurantId) {
 
 async function renderCustomerOrdersView(contentArea) {
     contentArea.innerHTML = `
-        <h2 class="text-3xl font-bold font-serif mb-6" data-translate-key="myOrders">My Orders</h2>
+        <h2 class="text-3xl font-bold font-serif mb-6">My Orders</h2>
         <div id="customer-orders-list" class="space-y-4"></div>`;
     const listEl = document.getElementById('customer-orders-list');
     const unsub = db.collection('orders').where('customerId', '==', currentUser.uid)
@@ -941,7 +889,6 @@ async function renderCustomerOrdersView(contentArea) {
             feather.replace();
         });
     unsubscribeListeners.push(unsub);
-    updateUIText();
 }
 
 function renderCustomerOrderCard(orderId, orderData) {
@@ -959,7 +906,7 @@ function renderCustomerOrderCard(orderId, orderData) {
     let actionButtons = `<button data-action="view-bill" data-order-id="${orderId}" class="btn btn-primary py-2 px-4">View Bill</button>`;
     
     if (orderData.status === 'placed') {
-        actionButtons += `<button data-action="cancel-order" data-order-id="${orderId}" class="btn btn-danger ml-2 py-2 px-4" data-translate-key="cancelOrder">Cancel Order</button>`;
+        actionButtons += `<button data-action="cancel-order" data-order-id="${orderId}" class="btn btn-danger ml-2 py-2 px-4">Cancel Order</button>`;
     }
 
     if ((orderData.status === 'delivered' || orderData.status === 'completed') && !orderData.isReviewed) {
@@ -994,7 +941,7 @@ function renderCustomerOrderCard(orderId, orderData) {
 
 function renderCustomerProfile(contentArea) {
     contentArea.innerHTML = `
-        <h2 class="text-3xl font-bold font-serif mb-6" data-translate-key="myProfile">My Profile</h2>
+        <h2 class="text-3xl font-bold font-serif mb-6">My Profile</h2>
         <div class="bg-white p-6 rounded-xl shadow-md">
             <form id="customer-profile-form" class="space-y-4">
                 <div>
@@ -1009,10 +956,9 @@ function renderCustomerProfile(contentArea) {
                     <label for="profile-address" class="block text-sm font-medium text-gray-700">Default Delivery Address</label>
                     <textarea id="profile-address" class="input-field mt-1 block w-full" rows="3">${currentUser.address || ''}</textarea>
                 </div>
-                <button type="submit" class="btn btn-primary py-3 px-6 rounded-lg" data-translate-key="updateProfile">Update Profile</button>
+                <button type="submit" class="btn btn-primary py-3 px-6 rounded-lg">Update Profile</button>
             </form>
         </div>`;
-    updateUIText();
 
     document.getElementById('customer-profile-form').addEventListener('submit', async e => {
         e.preventDefault();
@@ -1138,7 +1084,7 @@ async function renderCartView() {
 
     const cartHtml = `
         <form id="order-form">
-            <h3 class="text-2xl font-bold font-serif mb-4" data-translate-key="yourOrder">Your Order</h3>
+            <h3 class="text-2xl font-bold font-serif mb-4">Your Order</h3>
             <p class="font-semibold mb-4">${cart[0].restaurantName}</p>
             <div class="space-y-3 mb-4 max-h-60 overflow-y-auto">
                 ${cart.map(item => `<div class="flex justify-between items-center"><div><p class="font-medium">${item.name}</p><p class="text-sm text-gray-500">Qty: ${item.quantity}</p></div><div class="flex items-center gap-4"><p>₹${(item.price * item.quantity).toFixed(2)}</p><button type="button" data-action="remove-from-cart" data-item-id="${item.id}" class="btn btn-danger p-1 rounded-full"><i data-feather="trash-2" class="w-4 h-4"></i></button></div></div>`).join('')}
@@ -1172,7 +1118,7 @@ async function renderCartView() {
             </div>
             <div class="mt-6">
                 ${animatedButtonHtml}
-                <button type="button" class="btn bg-gray-200 w-full py-3 rounded-full mt-2" onclick="closeModal()" data-translate-key="close">Close</button>
+                <button type="button" class="btn bg-gray-200 w-full py-3 rounded-full mt-2" onclick="closeModal()">Close</button>
             </div>
         </form>`;
     showModal(cartHtml);
@@ -1433,7 +1379,6 @@ function showModal(contentHtml) {
     modalContainer.innerHTML = `<div class="modal-content">${contentHtml}</div>`;
     modalContainer.classList.add('active');
     feather.replace();
-    updateUIText();
 }
 
 function showSimpleModal(title, message, onOk) {
@@ -1527,4 +1472,3 @@ function getAiResponse(message) {
 }
 
 feather.replace();
-
