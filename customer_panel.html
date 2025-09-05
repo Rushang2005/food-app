@@ -122,7 +122,7 @@
             transform: translateY(-5px) scale(1.02);
         }
 
-        /* --- NEW: Styles for Circular Featured Restaurants --- */
+        /* Styles for Circular Featured Restaurants */
         .featured-restaurant-card {
             display: flex;
             flex-direction: column;
@@ -153,6 +153,106 @@
         .featured-restaurant-card:hover img {
             transform: scale(1.1);
         }
+
+        /* --- Styles for Beautiful Advertisement Carousel --- */
+        #advertisement-container {
+            position: relative;
+            padding-bottom: 2rem; /* Space for dots */
+        }
+        .advertisement-carousel-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px; /* Adjust height as needed */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px; /* Creates a 3D space for cards */
+        }
+        .advertisement-card {
+            position: absolute; /* All cards are stacked in the same spot */
+            width: 320px; /* Or your desired width */
+            aspect-ratio: 16 / 9;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            /* Beautiful transition for multiple properties */
+            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+                        opacity 0.6s ease,
+                        filter 0.6s ease;
+        }
+        .advertisement-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* --- Card States --- */
+        .advertisement-card.active {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+            z-index: 10;
+            filter: blur(0px);
+        }
+        .advertisement-card.prev {
+            transform: translateX(-50%) scale(0.8);
+            opacity: 0.6;
+            z-index: 5;
+            filter: blur(1px);
+        }
+        .advertisement-card.next {
+            transform: translateX(50%) scale(0.8);
+            opacity: 0.6;
+            z-index: 5;
+            filter: blur(1px);
+        }
+        .advertisement-card.hidden-prev {
+            transform: translateX(-100%) scale(0.7);
+            opacity: 0;
+            z-index: 1;
+            filter: blur(3px);
+        }
+        .advertisement-card.hidden-next {
+            transform: translateX(100%) scale(0.7);
+            opacity: 0;
+            z-index: 1;
+            filter: blur(3px);
+        }
+
+        /* --- Navigation Dots --- */
+        .carousel-dots {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.75rem;
+        }
+        .carousel-dots .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .carousel-dots .dot:hover {
+            transform: scale(1.2);
+        }
+        .carousel-dots .dot.active {
+            background-color: var(--primary-color);
+            transform: scale(1.3);
+        }
+
+        /* --- Desktop-specific sizing for Carousel --- */
+        @media (min-width: 768px) { /* This code only applies to screens 768px and wider (tablets/desktops) */
+            .advertisement-carousel-wrapper {
+                height: 280px; /* Increased from 200px */
+            }
+            .advertisement-card {
+                width: 480px;  /* Increased from 320px */
+            }
+        }
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
@@ -175,7 +275,7 @@
             .no-print { display: none; }
         }
 
-        /* --- START: Styles for Animated Order Button --- */
+        /* --- Styles for Animated Order Button --- */
         .animated-order-btn {
             position: relative;
             overflow: hidden;
@@ -184,13 +284,13 @@
             font-size: 1.1rem;
             font-weight: 600;
             color: var(--button-text-color);
-            background-color: var(--primary-color); /* UPDATED: Uses dynamic theme color */
+            background-color: var(--primary-color);
             border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
             outline: none;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            width: 100%; /* Make button full width in modal */
+            width: 100%;
             height: 60px;
         }
         .animated-order-btn:hover {
@@ -255,7 +355,6 @@
             from { transform: translateX(0); }
             to { transform: translateX(-80px); }
         }
-        /* --- END: Styles for Animated Order Button --- */
     </style>
      <script src="customer_panel.js" defer></script>
 </head>
@@ -264,8 +363,8 @@
     <div id="maintenance-overlay" class="flex items-center justify-center text-center p-8">
         <div>
             <i data-feather="tool" class="w-16 h-16 mx-auto text-gray-500"></i>
-            <h1 class="text-4xl font-bold font-serif mt-4" data-translate-key="maintenanceTitle">Under Maintenance</h1>
-            <p class="text-gray-600 mt-2" data-translate-key="maintenanceText">We are currently performing maintenance. Please check back later.</p>
+            <h1 class="text-4xl font-bold font-serif mt-4">Under Maintenance</h1>
+            <p class="text-gray-600 mt-2">We are currently performing maintenance. Please check back later.</p>
         </div>
     </div>
 
@@ -283,19 +382,9 @@
         </div>
 
         <div class="hidden md:flex items-center gap-4 flex-shrink-0">
-             <div class="relative">
-                <select id="language-switcher" class="input-field appearance-none rounded-lg py-2 px-4 pr-8 cursor-pointer bg-white">
-                    <option value="en">English</option>
-                    <option value="gu">ગુજરાતી</option>
-                    <option value="hi">हिन्दी</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                     <i data-feather="chevron-down" class="w-4 h-4"></i>
-                </div>
-            </div>
             <div id="user-info" class="text-right"></div>
             <button id="logout-btn" class="btn btn-primary text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
-                <i data-feather="log-out" class="w-4 h-4"></i><span data-translate-key="logout">Logout</span>
+                <i data-feather="log-out" class="w-4 h-4"></i><span>Logout</span>
             </button>
         </div>
 
@@ -323,16 +412,8 @@
             </button>
             <div id="mobile-user-info" class="text-left mb-8"></div>
             <nav id="mobile-nav-links" class="flex flex-col gap-2"></nav>
-            <div class="mt-8 pt-4 border-t">
-                 <label for="mobile-language-switcher" class="block text-sm font-medium text-gray-700" data-translate-key="language">Language</label>
-                 <select id="mobile-language-switcher" class="input-field w-full mt-1 appearance-none rounded-lg py-2 px-4 pr-8 cursor-pointer">
-                    <option value="en">English</option>
-                    <option value="gu">ગુજરાતી</option>
-                    <option value="hi">हिन्दी</option>
-                </select>
-            </div>
             <button id="mobile-logout-btn" class="btn btn-primary w-full mt-8 flex items-center justify-center gap-2">
-                <i data-feather="log-out" class="w-4 h-4"></i><span data-translate-key="logout">Logout</span>
+                <i data-feather="log-out" class="w-4 h-4"></i><span>Logout</span>
             </button>
         </div>
     </div>
@@ -357,12 +438,12 @@
             <i data-feather="message-square" class="w-6 h-6"></i>
         </button>
         <div id="chatbot-window" class="hidden absolute bottom-20 left-0 w-80 bg-white rounded-xl shadow-2xl overflow-hidden">
-            <div class="bg-gray-100 p-3 font-bold text-center" data-translate-key="aiAssistant">UniFood AI Assistant</div>
+            <div class="bg-gray-100 p-3 font-bold text-center">UniFood AI Assistant</div>
             <div id="chatbot-messages" class="p-4 h-96 overflow-y-auto">
-                <div class="text-sm p-2 bg-gray-100 rounded-lg" data-translate-key="aiGreeting">Hello! How can I help you today?</div>
+                <div class="text-sm p-2 bg-gray-100 rounded-lg">Hello! How can I help you today?</div>
             </div>
             <div class="p-2 border-t">
-                <input type="text" id="chatbot-input" class="input-field w-full text-sm" data-translate-key="askAnythingPlaceholder" placeholder="Ask me anything...">
+                <input type="text" id="chatbot-input" class="input-field w-full text-sm" placeholder="Ask me anything...">
             </div>
         </div>
     </div>
@@ -370,40 +451,40 @@
     <template id="login-form-template">
         <form id="login-form" class="space-y-6 fade-in">
             <div class="text-center">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 font-serif" data-translate-key="welcomeBack">Welcome Back</h2>
-                <p class="text-gray-600 mt-2" data-translate-key="signInPrompt">Sign in to get your food.</p>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 font-serif">Welcome Back</h2>
+                <p class="text-gray-600 mt-2">Sign in to get your food.</p>
             </div>
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700" data-translate-key="emailLabel">Email</label>
+                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                 <input type="email" id="email" class="input-field mt-1 block w-full rounded-lg py-3 px-4" required>
             </div>
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700" data-translate-key="passwordLabel">Password</label>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
                 <input type="password" id="password" class="input-field mt-1 block w-full rounded-lg py-3 px-4" required>
             </div>
-            <button type="submit" class="btn btn-primary w-full text-white font-bold py-3 rounded-lg" data-translate-key="login">Login</button>
+            <button type="submit" class="btn btn-primary w-full text-white font-bold py-3 rounded-lg">Login</button>
             <div id="login-error" class="text-red-500 text-center text-sm h-4"></div>
             <p class="text-center text-sm">
-                <span data-translate-key="dontHaveAccount">Don't have an account?</span>
-                <a href="#" id="show-signup-link" class="font-semibold text-gray-800 hover:underline" data-translate-key="signUp">Sign Up</a>
+                <span>Don't have an account?</span>
+                <a href="#" id="show-signup-link" class="font-semibold text-gray-800 hover:underline">Sign Up</a>
             </p>
         </form>
     </template>
     <template id="signup-form-template">
         <form id="signup-form" class="space-y-4 fade-in">
             <div class="text-center">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 font-serif" data-translate-key="createAccount">Create Account</h2>
-                <p class="text-gray-600 mt-2" data-translate-key="signUpPrompt">Join us for a delicious journey.</p>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 font-serif">Create Account</h2>
+                <p class="text-gray-600 mt-2">Join us for a delicious journey.</p>
             </div>
-            <input type="text" id="signup-name" class="input-field w-full rounded-lg py-3 px-4" data-translate-key="fullNamePlaceholder" placeholder="Full Name" required>
-            <input type="tel" id="signup-mobile" class="input-field w-full rounded-lg py-3 px-4" data-translate-key="mobileNumberPlaceholder" placeholder="Mobile Number" required>
-            <input type="email" id="signup-email" class="input-field w-full rounded-lg py-3 px-4" data-translate-key="emailPlaceholder" placeholder="Email Address" required>
-            <input type="password" id="signup-password" class="input-field w-full rounded-lg py-3 px-4" data-translate-key="passwordPlaceholder" placeholder="Password (min. 6 characters)" required>
-            <button type="submit" class="btn btn-primary w-full text-white font-bold py-3 rounded-lg" data-translate-key="signUp">Sign Up</button>
+            <input type="text" id="signup-name" class="input-field w-full rounded-lg py-3 px-4" placeholder="Full Name" required>
+            <input type="tel" id="signup-mobile" class="input-field w-full rounded-lg py-3 px-4" placeholder="Mobile Number" required>
+            <input type="email" id="signup-email" class="input-field w-full rounded-lg py-3 px-4" placeholder="Email Address" required>
+            <input type="password" id="signup-password" class="input-field w-full rounded-lg py-3 px-4" placeholder="Password (min. 6 characters)" required>
+            <button type="submit" class="btn btn-primary w-full text-white font-bold py-3 rounded-lg">Sign Up</button>
             <div id="signup-error" class="text-red-500 text-center text-sm h-4"></div>
             <p class="text-center text-sm">
-                <span data-translate-key="alreadyHaveAccount">Already have an account?</span>
-                <a href="#" id="show-login-link" class="font-semibold text-gray-800 hover:underline" data-translate-key="login">Login</a>
+                <span>Already have an account?</span>
+                <a href="#" id="show-login-link" class="font-semibold text-gray-800 hover:underline">Login</a>
             </p>
         </form>
     </template>
@@ -411,11 +492,11 @@
     <template id="customer-portal-template">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <aside class="hidden lg:block lg:col-span-1 bg-white p-4 rounded-xl shadow-md self-start sticky top-28">
-                <h3 class="text-xl font-bold font-serif mb-6 px-4" data-translate-key="menu">Menu</h3>
+                <h3 class="text-xl font-bold font-serif mb-6 px-4">Menu</h3>
                 <nav id="customer-nav" class="space-y-1">
-                    <button class="w-full text-left sidebar-link active" data-view="home"><i data-feather="home"></i><span data-translate-key="home">Home</span></button>
-                    <button class="w-full text-left sidebar-link" data-view="orders"><i data-feather="package"></i><span data-translate-key="myOrders">My Orders</span></button>
-                    <button class="w-full text-left sidebar-link" data-view="profile"><i data-feather="user"></i><span data-translate-key="profile">Profile</span></button>
+                    <button class="w-full text-left sidebar-link active" data-view="home"><i data-feather="home"></i><span>Home</span></button>
+                    <button class="w-full text-left sidebar-link" data-view="orders"><i data-feather="package"></i><span>My Orders</span></button>
+                    <button class="w-full text-left sidebar-link" data-view="profile"><i data-feather="user"></i><span>Profile</span></button>
                 </nav>
             </aside>
             <main id="customer-main-content" class="lg:col-span-3">
@@ -429,4 +510,3 @@
 
 </body>
 </html>
-
